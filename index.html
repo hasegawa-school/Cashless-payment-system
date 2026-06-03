@@ -109,7 +109,7 @@
     <h1>キャッシュレス レジ</h1>
 
     <div id="pw-box">
-      <input id="password" type="text" placeholder="パスワード">
+      <input id="password" type="text" placeholder="レジPW">
     </div>
 
     <div id="salesToday">今日の売上：0 円</div>
@@ -150,7 +150,7 @@
         audioClick.load();
         audioClick.play()
         .then(() => {
-          alert("音が正常に鳴りました！スマホの音声制限も解除されました。");
+          alert("音が正常に鳴りました。");
         })
         .catch(e => {
           alert("音声の再生に失敗しました。画面をもう一度タップしてから試してください。");
@@ -203,3 +203,117 @@
             document.getElementById("input-area").style.display = "none";
             document.getElementById("salesToday").style.display = "none";
             document.getElementById("displayAmount").innerText = pay;
+            document.getElementById("camera-area").style.display = "block";
+            startCamera();
+          } else {
+            alert("パスワードがちがいます。");
+            document.getElementById("qrStartBtn").classList.remove("disabled");
+            document.getElementById("qrStartBtn").disabled = false;
+          }
+        })
+        .catch(err => {
+          alert("通信エラーが発生しました。");
+          document.getElementById("qrStartBtn").classList.remove("disabled");
+          document.getElementById("qrStartBtn").disabled = false;
+        });
+      }
+
+      function startCamera() {
+        const video = document.getElementById("webcam");
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
+        .catch(() => {
+          return navigator.mediaDevices.getUserMedia({ video: true });
+        })
+        .then(stream => {
+          videoStream = stream;
+          video.srcObject = stream;
+          video.setAttribute("playsinline", true);
+          video.play();
+          animationFrameId = requestAnimationFrame(tick);
+        })
+        .catch(err => {
+          alert("カメラの起動に失敗しました。権限を許可してください。");
+          stopQRFlow();
+        });
+      }
+
+      function tick() {
+        const video = document.getElementById("webcam");
+        if (video.readyState === video.HAVE_CURRENT_DATA) {
+          const canvas = document.getElementById("hidden-canvas");
+          const ctx = canvas.getContext("2d");
+          canvas.height = video.videoHeight;
+          canvas.width = video.videoWidth;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "dontInvert",
+          });
+
+          if (code) {
+            // 🎵 音声再生（QRを読み取った瞬間）
+            audioClick.play().catch(e => console.log("音エラー:", e));
+
+            stopCamera();
+            processPayment(code.data);
+            return;
+          }
+        }
+        animationFrameId = requestAnimationFrame(tick);
+      }
+
+      function stopCamera() {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        if (videoStream) {
+          videoStream.getTracks().forEach(track => track.stop());
+        }
+      }
+
+      function stopQRFlow() {
+        stopCamera();
+        resetScreen();
+      }
+
+      function processPayment(cardId) {
+        const pw = document.getElementById("password").value;
+        const pay = Number(document.getElementById("payment").value);
+
+        document.getElementById("camera-area").style.display = "none";
+        document.getElementById("result").style.display = "block";
+        document.getElementById("result").innerText = "通信中...";
+
+        fetch(GAS_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "pay", pw: pw, card: cardId, pay: pay })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) {
+            alert(data.message);
+            resetScreen();
+            return;
+          }
+
+          document.getElementById("result").innerText = "残高：" + data.newBalance + " 円";
+          todaySales += pay;
+          updateSalesDisplay();
+
+          // 🎵 完了音
+          audioSuccess.play().catch(e => console.log("音声再生エラー:", e));
+
+          setTimeout(resetScreen, 2500);
+        })
+        .catch(err => {
+          alert("決済通信エラーが発生しました。");
+          resetScreen();
+        });
+      }
+
+      window.onload = () => {
+        document.getElementById("payment").focus();
+      };
+    </script>
+    <div id="copyright">© 2026 Hasegawa Konosuke. All rights reserved.</div>
+  </body>
+</html>
