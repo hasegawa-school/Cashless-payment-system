@@ -39,6 +39,7 @@
         position: fixed;
         left: 20px;
         bottom: 20px;
+        /* 見やすくするために少し背景を整えました */
         background: rgba(255,255,255,0.9);
         padding: 5px;
         border-radius: 5px;
@@ -61,6 +62,7 @@
         max-width: 400px;
         border: 4px solid #333;
         border-radius: 10px;
+        /* ★QRが文字化け・反転して読めなくなるのを防ぐため、鏡面反転(左右反転)のスタイルを削除しました */
       }
       #result {
         font-size: 36px;
@@ -73,7 +75,7 @@
         color:#444;
       }
       
-      /* ★ 音チェックボタンのスタイル */
+      /* ★ 音チェックボタンのスタイルを追加 */
       #soundCheckBtn {
         position: fixed;
         bottom: 20px;
@@ -134,26 +136,25 @@
     <button id="soundCheckBtn" onclick="testSound()">音チェック</button>
 
     <script>
-      // ★ あなたのGASウェブアプリURLをここに貼り付けてください
       const GAS_URL = "https://script.google.com/macros/s/AKfycbxPKbGDE_9q9UeIjVQ1dB9yKbZcWZzZWt9SVZcS3nJmgw6wCMCKTFhZFnF07qh8FP72/exec";
 
       let todaySales = 0;
       let videoStream = null;
       let animationFrameId = null;
 
-      // 事前にオーディオオブジェクトを作成
+      // ★ スマホでの音声再生制限を解除するため、あらかじめ裏でオーディオを定義
       let audioClick = new Audio("https://pocket-se.info/se/barcode.mp3");
       let audioSuccess = new Audio("https://pocket-se.info/se/itemget5.mp3");
 
-      // ★ 音チェックボタンを押したときの処理（音を鳴らしてブラウザの制限を解く）
+      // ★ 音チェックボタンを押したときの関数を追加
       function testSound() {
         audioClick.load();
         audioClick.play()
         .then(() => {
-          alert("音が正常に鳴りました。");
+          alert("音が正常に鳴りました！これでスマホの音声制限も解除されます。");
         })
         .catch(e => {
-          alert("音声の再生に失敗しました。画面をもう一度タップしてから試してください。");
+          alert("音声の再生に失敗しました。画面を一度タップしてから再度試してください。");
           console.log("音エラー:", e);
         });
       }
@@ -186,7 +187,7 @@
           return;
         }
 
-        // ここでも念のためオーディオの準備
+        // ★ スマホ対策：ボタンをタップしたこの瞬間に音声を読み込んで、読み取り時の「即時再生」を許可させる
         audioClick.load();
         audioSuccess.load();
 
@@ -220,8 +221,11 @@
 
       function startCamera() {
         const video = document.getElementById("webcam");
+        
+        // ★ QRコードを読みやすくするため、スマホの「外カメラ（背面カメラ）」を強制指定して起動させます
         navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
         .catch(() => {
+          // PCや、外カメラがない端末の場合は通常のデフォルトカメラを起動
           return navigator.mediaDevices.getUserMedia({ video: true });
         })
         .then(stream => {
@@ -252,7 +256,7 @@
           });
 
           if (code) {
-            // 🎵 音声再生（QRを読み取った瞬間）
+            // 🎵 音声再生（あらかじめ準備されたインスタンスを叩くのでスマホでも鳴ります）
             audioClick.play().catch(e => console.log("音エラー:", e));
 
             stopCamera();
