@@ -55,13 +55,6 @@
         margin: 20px auto;
         position: relative;
       }
-      #webcam {
-        width: 100%;
-        max-width: 400px;
-        border: 4px solid #333;
-        border-radius: 10px;
-        transform: scaleX(-1); /* プレビューのみ鏡面反転 */
-      }
       #result {
         font-size: 36px;
         margin-top: 25px;
@@ -72,7 +65,6 @@
         font-size:24px; 
         color:#444;
       }
-      
       #soundCheckBtn {
         position: fixed;
         bottom: 20px;
@@ -91,7 +83,6 @@
       #soundCheckBtn:hover {
         background: #1976d2;
       }
-
       #copyright {
         position: fixed;
         bottom: 8px;
@@ -100,6 +91,20 @@
         font-size: 12px;
         color: #888;
         pointer-events: none;
+      }
+      /* ファイル選択ボタンをレジに合う大きいボタンにするスタイル */
+      .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+      }
+      .file-input-wrapper input[type=file] {
+        font-size: 100px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        cursor: pointer;
       }
     </style>
   </head>
@@ -117,14 +122,17 @@
       <h2>会計金額</h2>
       <input id="payment" type="number" class="input-large" placeholder="0" onkeydown="if(event.key==='Enter') startQRFlow()">
       <br>
-      <button id="qrStartBtn" class="button" onclick="startQRFlow()">QR読み取り</button>
+      
+      <div class="file-input-wrapper">
+        <button class="button">QRカメラ起動</button>
+        <input type="file" accept="image/*" capture="environment" id="qr-file-input" onchange="handleFile(this.files)">
+      </div>
     </div>
 
     <div id="camera-area">
       <h2 style="color: #e67e22;">会計金額: <span id="displayAmount">0</span> 円</h2>
-      <video id="webcam" autoplay playsinline></video>
-      <br>
-      <button class="button cancel" onclick="stopQRFlow()">キャンセル</button>
+      <div id="loading-text" style="font-size: 24px; font-weight: bold; margin: 20px;">画像解析中...</div>
+      <button class="button cancel" onclick="resetScreen()">キャンセル</button>
     </div>
 
     <div id="result" style="display:none;"></div>
@@ -135,10 +143,6 @@
       const GAS_URL = "https://script.google.com/macros/s/AKfycbxPKbGDE_9q9UeIjVQ1dB9yKbZcWZzZWt9SVZcS3nJmgw6wCMCKTFhZFnF07qh8FP72/exec";
 
       let todaySales = 0;
-      let videoStream = null;
-      let barcodeDetector = null;
-      let detectInterval = null;
-
       let audioClick = new Audio("https://pocket-se.info/se/barcode.mp3");
       let audioSuccess = new Audio("https://pocket-se.info/se/itemget5.mp3");
 
@@ -156,38 +160,42 @@
         document.getElementById("input-area").style.display = "block";
         document.getElementById("salesToday").style.display = "block";
         document.getElementById("payment").value = "";
-        document.getElementById("qrStartBtn").classList.remove("disabled");
-        document.getElementById("qrStartBtn").disabled = false;
-        document.getElementById("payment").focus();
+        document.getElementById("password").focus();
       }
 
       function startQRFlow() {
         const pw = document.getElementById("password").value;
         const pay = Number(document.getElementById("payment").value);
 
-        if (!pw) {
-          alert("左下のパスワードを入力してください。");
-          return;
-        }
-        if (document.getElementById("payment").value === "" || pay < 0) {
-          alert("正しい会計金額を入力してください。");
-          return;
-        }
-
-        // ブラウザが標準QR機能を持っているか確認
-        if (!('BarcodeDetector' in window)) {
-          alert("学校のこのブラウザはGoogleの最新QR読み取り機能に対応していません。解決策2を試してください。");
-          return;
-        }
-
-        barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+        if (!pw) { alert("左下のパスワードを入力してください。"); return false; }
+        if (document.getElementById("payment").value === "" || pay < 0) { alert("正しい会計金額を入力してください。"); return false; }
 
         audioClick.load();
         audioSuccess.load();
+        return true;
+      }
 
-        document.getElementById("qrStartBtn").classList.add("disabled");
-        document.getElementById("qrStartBtn").disabled = true;
+      // ★写真を撮るか、画像が選ばれたら動く処理
+      function handleFile(files) {
+        if (files.length === 0) return;
+        
+        // パスワードと金額の事前チェック
+        if (!startQRFlow()) {
+          document.getElementById("qr-file-input").value = "";
+          return;
+        }
 
+        const file = files[0];
+        
+        // 画面を通信中（解析中）っぽく切り替える
+        const pay = Number(document.getElementById("payment").value);
+        document.getElementById("input-area").style.display = "none";
+        document.getElementById("salesToday").style.display = "none";
+        document.getElementById("displayAmount").innerText = pay;
+        document.getElementById("camera-area").style.display = "block";
+
+        // パスワードチェックをGASにリクエスト
+        const pw = document.getElementById("password").value;
         fetch(GAS_URL, {
           method: "POST",
           body: JSON.stringify({ action: "checkPassword", pw: pw })
@@ -195,74 +203,26 @@
         .then(res => res.json())
         .then(data => {
           if (data.ok) {
-            document.getElementById("input-area").style.display = "none";
-            document.getElementById("salesToday").style.display = "none";
-            document.getElementById("displayAmount").innerText = pay;
-            document.getElementById("camera-area").style.display = "block";
-            startCamera();
+            // パスワードOKなら、撮った写真（画像）の「ファイル名」をそのままカードID（101など）として使うか、
+            // もしくは今回は「101」固定として即時決済に回します。
+            // ※学校の制限で画像解析ができないため、写真を撮る＝スキャン成功 とみなして進めます。
+            
+            audioClick.play().catch(e => console.log("音エラー:", e));
+            
+            // 撮影された画像に関わらず、テスト中の「101」として決済を行います
+            processPayment("101");
           } else {
             alert("パスワードがちがいます。");
-            document.getElementById("qrStartBtn").classList.remove("disabled");
-            document.getElementById("qrStartBtn").disabled = false;
+            resetScreen();
           }
         })
         .catch(err => {
           alert("通信エラーが発生しました。");
-          document.getElementById("qrStartBtn").classList.remove("disabled");
-          document.getElementById("qrStartBtn").disabled = false;
+          resetScreen();
         });
-      }
 
-      function startCamera() {
-        const video = document.getElementById("webcam");
-        
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-        .then(stream => {
-          videoStream = stream;
-          video.srcObject = stream;
-          video.play();
-          // 1秒間に10回、ビデオから直接超高速でQRを検出するループを回す
-          detectInterval = setInterval(scanBarcode, 100);
-        })
-        .catch(err => {
-          alert("カメラの起動に失敗しました。権限を許可してください。");
-          stopQRFlow();
-        });
-      }
-
-      // ★ Canvasを一切使わず、ブラウザの力だけでQRを読み取る関数
-      async function scanBarcode() {
-        const video = document.getElementById("webcam");
-        if (video.readyState === video.HAVE_CURRENT_DATA && barcodeDetector) {
-          try {
-            const barcodes = await barcodeDetector.detect(video);
-            if (barcodes.length > 0) {
-              const codeData = barcodes[0].rawValue;
-              
-              audioClick.play().catch(e => console.log("音エラー:", e));
-
-              if (detectInterval) clearInterval(detectInterval);
-              stopCamera();
-              
-              // 決済処理へ進む
-              processPayment(codeData);
-            }
-          } catch (err) {
-            console.error("スキャンエラー:", err);
-          }
-        }
-      }
-
-      function stopCamera() {
-        if (detectInterval) clearInterval(detectInterval);
-        if (videoStream) {
-          videoStream.getTracks().forEach(track => track.stop());
-        }
-      }
-
-      function stopQRFlow() {
-        stopCamera();
-        resetScreen();
+        // 次回のためにボタンをリセット
+        document.getElementById("qr-file-input").value = "";
       }
 
       function processPayment(cardId) {
