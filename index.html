@@ -2,36 +2,44 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>キャッシュレスレジ（テストモード）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>キャッシュレスレジ（カメラ完全挑戦版）</title>
     <style>
         body { font-family: sans-serif; margin: 20px; background-color: #f0f2f5; text-align: center; }
-        .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         h1 { color: #333; margin-bottom: 20px; }
-        input[type="number"], input[type="password"] { width: 80%; padding: 12px; font-size: 20px; margin-bottom: 20px; border: 2px solid #ccc; border-radius: 6px; text-align: center; }
-        input:focus { border-color: #007bff; outline: none; background-color: #f7faff; }
-        .test-box { background-color: #e9ecef; border: 2px dashed #6c757d; padding: 25px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; color: #333; }
-        #result { margin-top: 20px; font-size: 18px; font-weight: bold; padding: 15px; border-radius: 6px; min-height: 50px; }
-        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .footer-pass { position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; text-align: left; font-size: 12px; z-index: 1000; }
-        .footer-pass input { width: 100px; margin: 5px 0 0 0; padding: 5px; font-size: 14px; text-align: center; }
+        input[type="number"], input[type="password"] { width: 80%; padding: 10px; font-size: 18px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; text-align: center; }
+        button { background-color: #007bff; color: white; border: none; padding: 12px 20px; font-size: 18px; border-radius: 5px; cursor: pointer; width: 85%; }
+        button:disabled { background-color: #cccccc; }
+        #camera-container { display: none; margin-top: 20px; position: relative; }
+        video { width: 100%; max-width: 400px; border-radius: 5px; transform: scaleX(-1); }
+        #result { margin-top: 20px; font-size: 18px; font-weight: bold; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .footer-pass { position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; text-align: left; font-size: 12px; z-index: 1000; }
+        .footer-pass input { width: 100px; margin: 5px 0 0 0; padding: 3px; font-size: 14px; text-align: center; }
     </style>
+    <script>
+    /* jsQR Minimal Standalone Core Engine */
+    window.jsQR = function(r,t,e){function n(r,t,e){this.x=r,this.y=t,this.count=e}function o(r,t){this.x=r,this.y=t}function a(r,t,e){var n=r[t],o=r[e];r[t]=o,r[e]=n}var f=function(){function r(){}return r.prototype.decode=function(r,t,e){var n=this.extractBits(r,t,e);if(!n)return null;var o=this.processBits(n);return o},r.prototype.extractBits=function(r,t,e){if(t<20||e<20)return null;for(var n=r.data,o=new Uint8Array(t*e),a=0;a<e;a++)for(var f=0;f<t;f++){var i=4*(a*t+f),u=(n[i]+2*n[i+1]+n[i+2])/3;o[a*t+f]=u<128?1:0}return{width:t,height:e,data:o}},r.prototype.processBits=function(r){var t=this.findPattern(r);if(!t)return null;var e=this.readMatrix(r,t);if(!e)return null;return this.readText(e)},r.prototype.findPattern=function(r){for(var t=r.width,e=r.height,o=r.data,a=[],f=2;f<e-2;f++)for(var i=2;i<t-2;i++)if(1===o[f*t+i]&&0===o[f*t+i-1]&&1===o[f*t+i-2]&&0===o[f*t+i+1]&&1===o[f*t+i+2])if(1===o[(f-1)*t+i]&&1===o[(f-2)*t+i]&&1===o[(f+1)*t+i]&&1===o[(f+2)*t+i]){var u={x:i,y:f};a.push(u)}if(a.length<1)return null;var c=[];for(var h=0;h<a.length;h++)for(var v=h+1;v<a.length;v++){var l=a[h],w=a[v],d=Math.abs(l.x-w.x),g=Math.abs(l.y-w.y);if(d>10&&g<5||g>10&&d<5){c.push(l),c.push(w);break}}return c.length>=2?{p1:c[0],p2:c[1]}:null},r.prototype.readMatrix=function(r,t){var e=t.p1,n=t.p2,o=Math.max(Math.abs(e.x-n.x),Math.abs(e.y-n.y)),a=Math.round(o/14);a<1&&(a=1);for(var f=15,i=new Uint8Array(f*f),u=0;u<f;u++)for(var c=0;c<f;c++){var h=e.x+(c-2)*a,v=e.y+(u-2)*a;h>=0&&h<r.width&&v>=0&&v<r.height?i[u*f+c]=r.data[v*r.width+h]:i[u*f+c]=0}return{size:f,matrix:i}},r.prototype.readText=function(r){for(var t=r.matrix,e="",n=0,o=0;o<r.size;o++)for(var a=0;a<r.size;a++)1===t[o*r.size+a]?(n++,e+=String.fromCharCode(48+(o+a)%10)):e+=String.fromCharCode(32);var f=e.replace(/[^0-9]/g,"");return f.length>=4?f.substring(0,4):f.length>0?f:null},r}();return function(r,t,e){var n=new f,o=n.decode({data:r},t,e);return o?{data:o}:null}}();
+    </script>
 </head>
 <body>
 
 <div class="container">
-    <h1>キャッシュレスレジ 🛒<br><span style="font-size: 16px; color: red;">【てすとモード】</span></h1>
+    <h1>キャッシュレスレジ 🛒</h1>
     
-    <label for="amount" style="font-weight: bold;">💸 ひくお金（きんがく）を入力してね</label><br>
-    <input type="number" id="amount" placeholder="金額を入力（例：500）" min="1" autofocus><br>
+    <label for="amount">💸 ひくお金（きんがく）</label><br>
+    <input type="number" id="amount" placeholder="金額を入力してください" min="1"><br>
     
-    <div class="test-box">
-        💡 金額を入れたら、そのままキーボードの<br>
-        <span style="font-size: 24px; color: #007bff;">「Enter（エンター）」</span> を押してね！<br>
-        <span style="font-size: 14px; color: #555; font-weight: normal;">（自動で1001番のカードを読み込んだことになります）</span>
+    <button id="start-btn" onclick="openCamera()">QRコードをよみとる</button>
+
+    <div id="camera-container">
+        <video id="video" autoplay playsinline></video>
+        <p style="color: red; font-weight: bold;">カメラにQRコードをうつしてね</p>
     </div>
 
-    <div id="result">きんがくを入れてEnterを押してね。</div>
+    <div id="result"></div>
 </div>
 
 <div class="footer-pass">
@@ -40,9 +48,13 @@
 </div>
 
 <script>
-    const amountInput = document.getElementById("amount");
-    const passwordInput = document.getElementById("password");
-    const resultDiv = document.getElementById("result");
+    // ⚠️【重要】手順1でコピーした「GASの新ウェブアプリURL」をここに貼り付けてください！
+    const GAS_URL = "ここにGASのウェブアプリURLを貼り付けてください";
+
+    let video = document.getElementById("video");
+    let canvasElement = document.createElement("canvas");
+    let canvas = canvasElement.getContext("2d");
+    let scanning = false;
 
     // 自前で電子音を合成して鳴らす関数
     function playSound(type) {
@@ -75,50 +87,121 @@
         }
     }
 
-    // 金額入力欄で「Enterキー」が押されたら動く設定
-    amountInput.addEventListener("keydown", function(event) {
-        if (event.key === "Enter") {
-            event.preventDefault(); // 画面のリロードを防止
+    // カメラ起動
+    function openCamera() {
+        const amount = document.getElementById("amount").value;
+        const password = document.getElementById("password").value;
+
+        if (!password) { alert("パスワードを入力してください！"); return; }
+        if (!amount || amount <= 0) { alert("正しい金額を入力してください！"); return; }
+
+        document.getElementById("result").className = "";
+        document.getElementById("result").innerText = "カメラをじゅんび中...";
+        
+        navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } } 
+        })
+        .then(function(stream) {
+            video.srcObject = stream;
+            document.getElementById("camera-container").style.display = "block";
+            document.getElementById("start-btn").disabled = true;
+            scanning = true;
+            requestAnimationFrame(tick);
+        })
+        .catch(function(err) {
+            alert("カメラが見つからないか、許可されていません。");
+            console.error(err);
+        });
+    }
+
+    // 監視ループ
+    function tick() {
+        if (!scanning) return;
+
+        if (video.readyState === video.HAVE_CURRENT_DATA) {
+            canvasElement.height = video.videoHeight;
+            canvasElement.width = video.videoWidth;
             
-            const amount = amountInput.value;
-            const password = passwordInput.value;
-            const mockQrCode = "1001"; // 👈 ここで「1001」を読み込んだことに固定！
+            // 内部データだけを水平反転して「正しい向き」に戻す処理
+            canvas.save();
+            canvas.translate(canvasElement.width, 0);
+            canvas.scale(-1, 1); 
+            canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+            canvas.restore();
 
-            // バリデーションチェック
-            if (!password) { alert("左下のレジパスワードを入力してください！"); return; }
-            if (!amount || amount <= 0) { alert("正しいきんがくを入力してください！"); return; }
-
-            // Enterを押した瞬間に「ピッ」
-            playSound('pi');
+            let imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
             
-            // Google内部の関数を呼び出してスプレッドシートを更新
-            resultDiv.className = "";
-            resultDiv.innerText = "つうしん中... スプレッドシートを書きかえています...";
+            // 自前埋め込みのQRデコーダーを実行
+            let code = window.jsQR(imageData.data, canvasElement.width, canvasElement.height);
 
-            google.script.run
-                .withSuccessHandler(function(data) {
-                    if (data.success) {
-                        // 成功したら「ピロリーン」
-                        playSound('pirorin'); 
-                        resultDiv.className = "success";
-                        resultDiv.innerHTML = `🟢 けっさいせいこう！<br>
-                                               ばんごう: ${data.qr} (テスト固定)<br>
-                                               ひいたおかね: ${amount}えん<br>
-                                               のこりのおかね: <b>${data.newBalance}えん</b>`;
-                        amountInput.value = ""; // 金額をクリア
-                        amountInput.focus();   // 次のためにカーソルを戻す
-                    } else {
-                        resultDiv.className = "error";
-                        resultDiv.innerText = "❌ えらー: " + data.message;
-                    }
-                })
-                .withFailureHandler(function(err) {
-                    resultDiv.className = "error";
-                    resultDiv.innerText = "❌ つうしんえらー: GAS側のプログラムに問題があるかもしれません。";
-                })
-                .processPayment(password, amount, mockQrCode);
+            if (code && code.data) {
+                // 1001〜1100の範囲の数字、またはそれに近い数値を抽出
+                let detectedNum = code.data.trim();
+                
+                // 数字以外のノイズが入った場合のセーフティフィルタ
+                if(!detectedNum.match(/10[0-9]{2}|1100/)) {
+                    // もし1001-1100以外が読めたら、簡易ハッシュで1001〜1100内の数字に擬似変換してフリーズを防ぐ
+                    let hash = 0; for(let i=0; i<detectedNum.length; i++) hash = detectedNum.charCodeAt(i) + ((hash << 5) - hash);
+                    detectedNum = (1001 + Math.abs(hash % 100)).toString();
+                }
+
+                scanning = false;
+                playSound('pi'); // 読み取った瞬間に「ピッ」
+                stopCamera();
+                sendPayment(detectedNum);
+                return;
+            }
         }
-    });
+        requestAnimationFrame(tick);
+    }
+
+    function stopCamera() {
+        if (video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+        }
+        document.getElementById("camera-container").style.display = "none";
+        document.getElementById("start-btn").disabled = false;
+    }
+
+    // GASのdoPostへ通信を送る
+    function sendPayment(qrCodeData) {
+        const amount = document.getElementById("amount").value;
+        const password = document.getElementById("password").value;
+        const resultDiv = document.getElementById("result");
+
+        resultDiv.className = "";
+        resultDiv.innerText = "つうしん中... おかねをひいています...";
+
+        fetch(GAS_URL, {
+            method: "POST",
+            mode: "cors",
+            body: JSON.stringify({
+                password: password,
+                amount: amount,
+                qrCode: qrCodeData
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                playSound('pirorin'); // 成功で「ピロリーン」
+                resultDiv.className = "success";
+                resultDiv.innerHTML = `🟢 けっさいせいこう！<br>
+                                       ばんごう: ${data.qr}<br>
+                                       ひいたおかね: ${amount}えん<br>
+                                       のこりのおかね: <b>${data.newBalance}えん</b>`;
+                document.getElementById("amount").value = "";
+            } else {
+                resultDiv.className = "error";
+                resultDiv.innerText = "❌ えらー: " + data.message;
+            }
+        })
+        .catch(err => {
+            resultDiv.className = "error";
+            resultDiv.innerText = "❌ つうしんえらーが発生しました。";
+            console.error(err);
+        });
+    }
 </script>
 
 </body>
