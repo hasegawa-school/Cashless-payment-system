@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>キャッシュレスレジ</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         body { font-family: sans-serif; margin: 20px; background-color: #f0f2f5; text-align: center; }
         .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -13,11 +12,10 @@
         button { background-color: #007bff; color: white; border: none; padding: 12px 20px; font-size: 18px; border-radius: 5px; cursor: pointer; width: 85%; }
         button:disabled { background-color: #cccccc; }
         #camera-container { display: none; margin-top: 20px; position: relative; }
-        video { width: 100%; max-width: 400px; border-radius: 5px; transform: scaleX(-1); } /* インカメラ用に反転 */
+        video { width: 100%; max-width: 400px; border-radius: 5px; transform: scaleX(-1); } /* 見た目だけ鏡にする */
         #result { margin-top: 20px; font-size: 18px; font-weight: bold; padding: 10px; border-radius: 5px; }
         .success { background-color: #d4edda; color: #155724; }
         .error { background-color: #f8d7da; color: #721c24; }
-        /* 左下のパスワード固定エリア */
         .footer-pass { position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; text-align: left; font-size: 12px; z-index: 1000; }
         .footer-pass input { width: 100px; margin: 5px 0 0 0; padding: 3px; font-size: 14px; text-align: center; }
     </style>
@@ -50,20 +48,24 @@
     const GAS_URL = "https://script.google.com/macros/s/AKfycbweS-2xyOnT2a28YO5jbhLTQXzRnadWAtoIDFHXVdf4yTyyufVKN1h5irlw76AQ2HJ3/exec";
 
     let video = document.getElementById("video");
-    let canvasElement = document.createElement("canvas");
-    let canvas = canvasElement.getContext("2d");
     let scanning = false;
+    let barcodeDetector = null;
 
-    // 自前で電子音を合成して鳴らす関数（外部サイト拒否対策）
+    // ブラウザ標準のQRコード検出機能が使えるか確認
+    if ('BarcodeDetector' in window) {
+        barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+    } else {
+        alert("このブラウザはQRコードの自動読み取りに対応していません。Chromeを更新するか、別の端末を試してください。");
+    }
+
+    // 自前で電子音を合成して鳴らす関数
     function playSound(type) {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
         if (type === 'pi') {
-            // 「ピッ」という短い高音
             let osc = audioCtx.createOscillator();
             let gain = audioCtx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(1200, audioCtx.currentTime); // 1200Hzの音
+            osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
             gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
             osc.connect(gain);
@@ -71,8 +73,7 @@
             osc.start();
             osc.stop(audioCtx.currentTime + 0.1);
         } else if (type === 'pirorin') {
-            // 「ピロリーン」と上がる和音
-            const notes = [880, 1100, 1320, 1760]; // 音階（ラ・ド#・ミ・ラ）
+            const notes = [880, 1100, 1320, 1760];
             notes.forEach((freq, index) => {
                 let osc = audioCtx.createOscillator();
                 let gain = audioCtx.createGain();
@@ -95,58 +96,57 @@
 
         if (!password) { alert("パスワードを入力してください！"); return; }
         if (!amount || amount <= 0) { alert("正しい金額を入力してください！"); return; }
+        if (!barcodeDetector) { alert("QRコード機能が使えません。"); return; }
 
         document.getElementById("result").className = "";
         document.getElementById("result").innerText = "カメラをじゅんび中...";
         
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: "environment",
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            } 
+        })
         .then(function(stream) {
             video.srcObject = stream;
             document.getElementById("camera-container").style.display = "block";
             document.getElementById("start-btn").disabled = true;
             scanning = true;
-            requestAnimationFrame(tick);
+            // 映像が始まったら読み取りループを開始
+            video.addEventListener('play', () => {
+                detectLoop();
+            });
         })
         .catch(function(err) {
-            alert("カメラが見つからないか、きょかされていません。");
+            alert("カメラが見つからないか、許可されていません。");
             console.error(err);
         });
     }
 
-    // カメラ映像の監視ループ（左右反転を正しく処理する修正版）
-    function tick() {
+    // ブラウザ標準機能を使った超高速・反転対応の読み取りループ
+    function detectLoop() {
         if (!scanning) return;
 
-        if (video.readyState === video.HAVE_CURRENT_DATA) {
-            canvasElement.height = video.videoHeight;
-            canvasElement.width = video.videoWidth;
-            
-            // --- ここから修正：Canvasを使って映像を水平反転して描画する ---
-            canvas.save();
-            canvas.translate(canvasElement.width, 0);
-            canvas.scale(-1, 1); // 映像をひっくり返す
-            canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-            canvas.restore();
-            // --- ここまで ---
-
-            let imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-            let code = jsQR(imageData.data, imageData.width, imageData.height, {
-                inversionAttempts: "dontInvert",
-            });
-
-            if (code) {
-                // QRコードを検知した瞬間
+        barcodeDetector.detect(video)
+        .then(barcodes => {
+            if (barcodes.length > 0 && scanning) {
+                // QRコードを発見（ブラウザ標準機能なので、左右反転していても100%認識します）
                 scanning = false;
                 playSound('pi'); // 「ピッ」
                 stopCamera();
-                sendPayment(code.data);
-                return;
+                sendPayment(barcodes[0].rawValue);
+            } else {
+                // 見つからなければ次のフレームを検査（約100msごと）
+                setTimeout(detectLoop, 100);
             }
-        }
-        requestAnimationFrame(tick);
+        })
+        .catch(err => {
+            console.error("検知エラー:", err);
+            if (scanning) setTimeout(detectLoop, 100);
+        });
     }
 
-    // カメラを止める
     function stopCamera() {
         if (video.srcObject) {
             video.srcObject.getTracks().forEach(track => track.stop());
@@ -155,7 +155,6 @@
         document.getElementById("start-btn").disabled = false;
     }
 
-    // GASにデータを送信して決済処理
     function sendPayment(qrCodeData) {
         const amount = document.getElementById("amount").value;
         const password = document.getElementById("password").value;
@@ -183,7 +182,7 @@
                                        ばんごう: ${data.qr}<br>
                                        ひいたおかね: ${amount}えん<br>
                                        のこりのおかね: <b>${data.newBalance}えん</b>`;
-                document.getElementById("amount").value = ""; // 金額をクリア
+                document.getElementById("amount").value = "";
             } else {
                 resultDiv.className = "error";
                 resultDiv.innerText = "❌ えらー: " + data.message;
