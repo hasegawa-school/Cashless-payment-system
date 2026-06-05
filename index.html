@@ -113,14 +113,22 @@
         });
     }
 
-    // カメラ映像の監視ループ
+    // カメラ映像の監視ループ（左右反転を正しく処理する修正版）
     function tick() {
         if (!scanning) return;
 
         if (video.readyState === video.HAVE_CURRENT_DATA) {
             canvasElement.height = video.videoHeight;
             canvasElement.width = video.videoWidth;
+            
+            // --- ここから修正：Canvasを使って映像を水平反転して描画する ---
+            canvas.save();
+            canvas.translate(canvasElement.width, 0);
+            canvas.scale(-1, 1); // 映像をひっくり返す
             canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+            canvas.restore();
+            // --- ここまで ---
+
             let imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
             let code = jsQR(imageData.data, imageData.width, imageData.height, {
                 inversionAttempts: "dontInvert",
