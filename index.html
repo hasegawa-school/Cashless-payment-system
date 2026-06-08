@@ -3,166 +3,338 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>キャッシュレスレジ（チェッカー完全移植版）</title>
+    <title>キャッシュレスレジ（完全移植版）</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         body { 
             font-family: 'Helvetica Neue', Arial, sans-serif; 
             background-color: #f8f9fa; 
             margin: 0; 
-            padding: 20px; 
+            padding: 20px 20px 80px 20px; 
             display: flex;
             flex-direction: column;
             align-items: center;
         }
+
         h1 { color: #2c3e50; margin-bottom: 20px; }
-        .container { max-width: 450px; width: 100%; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
-        input[type="number"] { width: 80%; padding: 12px; font-size: 22px; margin-bottom: 15px; border: 2px solid #ccc; border-radius: 6px; text-align: center; }
-        button { background-color: #2ecc71; color: white; border: none; padding: 15px 20px; font-size: 18px; border-radius: 5px; cursor: pointer; width: 85%; font-weight: bold; transition: 0.2s; }
-        button:hover { background-color: #27ae60; }
-        button:disabled { background-color: #cccccc; }
-        #camera-container { width: 320px; height: 240px; border: 5px solid #34495e; border-radius: 12px; overflow: hidden; background: #000; margin: 20px auto; position: relative; display: none; }
+
+        .main-container {
+            display: flex;
+            flex-direction: column; /* 縦並びに固定してシンプルに */
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        /* 💰 金額入力エリアのスタイルを追加 */
+        .amount-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        input[type="number"] {
+            width: 80%;
+            padding: 12px;
+            font-size: 24px;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        #camera-container {
+            width: 320px;
+            height: 240px;
+            border: 5px solid #34495e;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
         .mirror { transform: scaleX(-1); }
         #video { width: 100%; height: 100%; object-fit: cover; }
-        #result { margin-top: 20px; font-size: 18px; font-weight: bold; padding: 15px; border-radius: 6px; min-height: 40px; }
-        .loading { background-color: #fff3cd; color: #856404; }
-        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; animation: pop 0.3s ease-out; }
-        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        
+        #video-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #2c3e50;
+            color: white;
+            display: none; 
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 5;
+        }
+
+        #camera-off-msg { color: white; position: absolute; display: none; z-index: 10; }
+
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .btn-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            background-color: #34495e;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: 0.2s;
+            flex: 1;
+        }
+        .btn:hover { background-color: #2c3e50; }
+        .btn.active { background-color: #e67e22; }
+
+        #status { 
+            margin-top: 15px; 
+            font-weight: bold; 
+            font-size: 1.1rem;
+            color: #e74c3c;
+            min-height: 1.5em;
+            text-align: center;
+        }
+
+        #footer {
+            position: fixed;
+            bottom: 0; left: 0; width: 100%;
+            background-color: rgba(248, 249, 250, 0.9);
+            text-align: center;
+            padding: 10px 0;
+            color: #95a5a6;
+            font-size: 0.85rem;
+            border-top: 1px solid #ddd;
+            z-index: 100;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
     <h1>キャッシュレスレジ 🛒</h1>
-    
-    <label for="amount" style="font-weight:bold; color:#2c3e50; font-size:1.1rem;">💸 ひくお金（きんがく）</label><br>
-    <input type="number" id="amount" placeholder="金額を入力（例：300）" min="1"><br>
-    
-    <button id="start-btn" onclick="openCamera()">📷 カードをピッとする</button>
 
-    <div id="camera-container">
-        <video id="video" class="mirror" autoplay playsinline></video>
-        <canvas id="canvas" hidden></canvas>
+    <div class="main-container">
+        <div class="amount-box">
+            <label for="amount" style="font-weight:bold; color:#2c3e50; font-size:1.2rem;">💸 ひくお金（きんがく）</label><br>
+            <input type="number" id="amount" placeholder="300" min="1" value="300">
+        </div>
+
+        <div id="camera-container">
+            <video id="video" class="mirror" autoplay playsinline></video>
+            <div id="video-overlay">
+                <div style="font-size: 2rem;">🔒</div>
+                <div>プレビュー非表示中</div>
+                <div style="font-size: 0.7rem; margin-top:5px;">スキャンは継続しています</div>
+            </div>
+            <div id="camera-off-msg">カメラOFF中</div>
+            <canvas id="canvas" hidden></canvas>
+        </div>
+        
+        <div class="controls">
+            <div class="btn-row">
+                <button class="btn" onclick="toggleMirror()">左右反転</button>
+                <button id="preview-toggle-btn" class="btn" onclick="togglePreview()">映像を隠す</button>
+            </div>
+            <div class="btn-row">
+                <button id="cam-toggle-btn" class="btn" onclick="toggleCamera()">カメラ停止</button>
+                <button id="cam-switch-btn" class="btn" onclick="switchCamera()">カメラ切替</button>
+            </div>
+        </div>
+
+        <div id="status">カメラ準備中...</div>
     </div>
 
-    <div id="result">金額を入れてボタンを押してね。</div>
-</div>
+    <div id="footer">© 2026 Hasegawa Konosuke. All rights reserved.</div>
 
-<script>
-    // ⚙️ 先生のGoogleフォーム設定情報
-    const FORM_ID = "1FAIpQLSf7-2OoPL7_PNwKynLwhL4tD5IrzmDStBOV7-YGfTj3MyeJdw"; 
-    const ENTRY_BANGO = "entry.1070729567"; 
-    const ENTRY_KINGAKU = "entry.216940057"; 
+    <script>
+        // ⚙️ 先生のGoogleフォーム連携用設定（ここを流用します）
+        const FORM_ID = "1FAIpQLSf7-2OoPL7_PNwKynLwhL4tD5IrzmDStBOV7-YGfTj3MyeJdw"; 
+        const ENTRY_BANGO = "entry.1070729567"; 
+        const ENTRY_KINGAKU = "entry.216940057"; 
 
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const context = canvas.getContext('2d', { willReadFrequently: true });
-    const resultText = document.getElementById('result');
-    const startBtn = document.getElementById('start-btn');
-    const camContainer = document.getElementById('camera-container');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        const statusText = document.getElementById('status');
+        const camBtn = document.getElementById('cam-toggle-btn');
+        const camOffMsg = document.getElementById('camera-off-msg');
+        const videoOverlay = document.getElementById('video-overlay');
+        const previewBtn = document.getElementById('preview-toggle-btn');
 
-    let isCameraOn = false;
-    let localStream = null;
+        let lastCode = "";
+        let lastTime = 0;
+        let localStream = null;
+        let isCameraOn = false;
+        let isPreviewVisible = true;
+        let videoDevices = [];
+        let currentDeviceIndex = 0;
 
-    // 提出物チェッカーのオーディオシステムを完全移植
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playBeep() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    }
+        function toggleMirror() { video.classList.toggle('mirror'); }
 
-    // 決済成功時のファンファーレ音（ピロリーン！）
-    function playSuccessSound() {
-        const notes = [880, 1100, 1320, 1760];
-        notes.forEach((freq, index) => {
-            let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
-            osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, audioCtx.currentTime + (index * 0.06));
-            gain.gain.setValueAtTime(0.15, audioCtx.currentTime + (index * 0.06)); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (index * 0.06) + 0.3);
-            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(audioCtx.currentTime + (index * 0.06)); osc.stop(audioCtx.currentTime + (index * 0.06) + 0.3);
-        });
-    }
-
-    async function openCamera() {
-        const amount = document.getElementById("amount").value;
-        if (!amount || amount <= 0) { alert("正しい金額を入力してください！"); return; }
-
-        resultText.className = "";
-        resultText.innerText = "カメラ起動中...";
-        
-        // 提出物チェッカーと全く同じカメラ起動処理
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            video.srcObject = localStream;
-            camContainer.style.display = "block";
-            startBtn.disabled = true;
-            isCameraOn = true;
-            resultText.style.color = "#e74c3c";
-            resultText.innerText = "カメラにカードのQRをうつしてね！";
-            requestAnimationFrame(tick);
-        } catch (err) {
-            resultText.innerText = "カメラエラー";
-            alert("カメラの起動に失敗しました。");
-        }
-    }
-
-    function stopCamera() {
-        if (localStream) localStream.getTracks().forEach(track => track.stop());
-        video.srcObject = null;
-        camContainer.style.display = "none";
-        startBtn.disabled = false;
-        isCameraOn = false;
-    }
-
-    function tick() {
-        if (!isCameraOn) return;
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            // 提出物チェッカーで大成功している高画質キャプチャ処理
-            canvas.height = video.videoHeight;
-            canvas.width = video.videoWidth;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, imageData.width, imageData.height);
-            
-            if (code) {
-                isCameraOn = false; // ループ停止
-                playBeep();        // 提出物チェッカーと同じ「ピッ」
-                stopCamera();
-                sendToGoogleForm(code.data.trim());
-                return;
+        function togglePreview() {
+            isPreviewVisible = !isPreviewVisible;
+            if (isPreviewVisible) {
+                videoOverlay.style.display = "none";
+                previewBtn.innerText = "映像を隠す";
+                previewBtn.classList.remove('active');
+            } else {
+                videoOverlay.style.display = "flex";
+                previewBtn.innerText = "映像を表示";
+                previewBtn.classList.add('active');
             }
         }
-        requestAnimationFrame(tick);
-    }
 
-    function sendToGoogleForm(qrCodeData) {
-        const amount = document.getElementById("amount").value;
-        resultText.className = "loading";
-        resultText.style.color = "#856404";
-        resultText.innerText = "つうしん中... おかねをひいています...";
+        async function updateCameraList() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            videoDevices = devices.filter(device => device.kind === 'videoinput');
+            if (videoDevices.length <= 1) {
+                document.getElementById('cam-switch-btn').style.display = 'none';
+            }
+        }
 
-        // Googleフォームへのデータ送信URLを作成
-        const submitUrl = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse?${ENTRY_BANGO}=${qrCodeData}&${ENTRY_KINGAKU}=${amount}&submit=Submit`;
+        async function switchCamera() {
+            if (videoDevices.length > 1) {
+                currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
+                await startCamera(videoDevices[currentDeviceIndex].deviceId);
+            }
+        }
 
-        // フォーム送信を実行
-        const beacon = new Image();
-        beacon.src = submitUrl;
+        async function toggleCamera() {
+            if (isCameraOn) stopCamera();
+            else await startCamera(videoDevices[currentDeviceIndex]?.deviceId);
+        }
 
-        // 送信完了の演出
-        setTimeout(() => {
-            playSuccessSound(); // 「ピロリーン！」
-            resultText.className = "success";
-            resultText.style.color = "#155724";
-            resultText.innerHTML = `🟢 けっさいせいこう！<br>ばんごう: ${qrCodeData}<br>ひいたおかね: ${amount}えん`;
-            document.getElementById("amount").value = "";
-        }, 1200);
-    }
-</script>
+        async function startCamera(deviceId = null) {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            const constraints = {
+                video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "user" }
+            };
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = localStream;
+                video.style.display = "block";
+                camOffMsg.style.display = "none";
+                camBtn.innerText = "カメラ停止";
+                camBtn.classList.remove('active');
+                isCameraOn = true;
+                statusText.style.color = "#e74c3c";
+                statusText.innerText = "スキャン待機中";
+                requestAnimationFrame(tick);
+            } catch (err) {
+                statusText.innerText = "カメラエラー";
+            }
+        }
+
+        function stopCamera() {
+            if (localStream) localStream.getTracks().forEach(track => track.stop());
+            video.srcObject = null;
+            video.style.display = "none";
+            camOffMsg.style.display = "block";
+            camBtn.innerText = "カメラ再開";
+            camBtn.classList.add('active');
+            isCameraOn = false;
+            statusText.style.color = "#2c3e50";
+            statusText.innerText = "カメラ停止中";
+        }
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        // 🟢 決済成功のファンファーレ音（ピロリーン！）
+        function playSuccessSound() {
+            const notes = [880, 1100, 1320, 1760];
+            notes.forEach((freq, index) => {
+                let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, audioCtx.currentTime + (index * 0.06));
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime + (index * 0.06)); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (index * 0.06) + 0.3);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(audioCtx.currentTime + (index * 0.06)); osc.stop(audioCtx.currentTime + (index * 0.06) + 0.3);
+            });
+        }
+
+        function tick() {
+            if (!isCameraOn) return;
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.height = video.videoHeight;
+                canvas.width = video.videoWidth;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                if (code) {
+                    const now = Date.now();
+                    if (code.data !== lastCode || now - lastTime > 1500) { // 連続送信防止のため1.5秒間隔に
+                        handleScan(code.data);
+                        lastCode = code.data;
+                        lastTime = now;
+                    }
+                }
+            }
+            requestAnimationFrame(tick);
+        }
+
+        // 🔥【ここだけを改造！】読み取ったらGoogleフォームへ自動送信
+        function handleScan(data) {
+            const amount = document.getElementById("amount").value;
+            if (!amount || amount <= 0) {
+                statusText.style.color = "#e74c3c";
+                statusText.innerText = "⚠️ 金額を正しく入力してください";
+                return;
+            }
+
+            playBeep(); // 提出物チェッカーと同じ「ピッ！」
+            
+            statusText.style.color = "#856404";
+            statusText.innerText = `通信中... [番号:${data} / 金額:${amount}円]`;
+
+            // Googleフォームへの送信URLを生成
+            const submitUrl = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse?${ENTRY_BANGO}=${data.trim()}&${ENTRY_KINGAKU}=${amount}&submit=Submit`;
+
+            // 送信実行
+            const beacon = new Image();
+            beacon.src = submitUrl;
+
+            // 1.2秒後に成功画面とピロリーン音を出す演出
+            setTimeout(() => {
+                playSuccessSound(); // 「ピロリーン！」
+                statusText.style.color = "#27ae60";
+                statusText.innerText = `🟢 決済成功！ 番号:${data} から ${amount}円 引きました`;
+            }, 1200);
+        }
+
+        (async () => {
+            await updateCameraList();
+            await startCamera();
+        })();
+    </script>
 </body>
 </html>
