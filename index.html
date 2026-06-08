@@ -3,24 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>キャッシュレスレジ（カメラ完全挑戦版）</title>
+    <title>キャッシュレスレジ（QRカメラ決済版）</title>
     <style>
         body { font-family: sans-serif; margin: 20px; background-color: #f0f2f5; text-align: center; }
         .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         h1 { color: #333; margin-bottom: 20px; }
-        input[type="number"], input[type="password"] { width: 80%; padding: 10px; font-size: 18px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; text-align: center; }
-        button { background-color: #007bff; color: white; border: none; padding: 12px 20px; font-size: 18px; border-radius: 5px; cursor: pointer; width: 85%; }
+        input[type="number"] { width: 80%; padding: 12px; font-size: 20px; margin-bottom: 15px; border: 2px solid #ccc; border-radius: 6px; text-align: center; }
+        button { background-color: #28a745; color: white; border: none; padding: 15px 20px; font-size: 18px; border-radius: 5px; cursor: pointer; width: 85%; font-weight: bold; }
         button:disabled { background-color: #cccccc; }
-        #camera-container { display: none; margin-top: 20px; position: relative; }
-        video { width: 100%; max-width: 400px; border-radius: 5px; transform: scaleX(-1); }
-        #result { margin-top: 20px; font-size: 18px; font-weight: bold; padding: 10px; border-radius: 5px; }
-        .success { background-color: #d4edda; color: #155724; }
-        .error { background-color: #f8d7da; color: #721c24; }
-        .footer-pass { position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; text-align: left; font-size: 12px; z-index: 1000; }
-        .footer-pass input { width: 100px; margin: 5px 0 0 0; padding: 3px; font-size: 14px; text-align: center; }
+        #camera-container { display: none; margin-top: 20px; }
+        video { width: 100%; max-width: 400px; border-radius: 5px; transform: scaleX(-1); border: 3px solid #007bff; }
+        #result { margin-top: 20px; font-size: 18px; font-weight: bold; padding: 15px; border-radius: 6px; min-height: 40px; }
+        .loading { background-color: #fff3cd; color: #856404; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
     </style>
     <script>
-    /* jsQR Minimal Standalone Core Engine */
+    /* jsQR Standalone Core */
     window.jsQR = function(r,t,e){function n(r,t,e){this.x=r,this.y=t,this.count=e}function o(r,t){this.x=r,this.y=t}function a(r,t,e){var n=r[t],o=r[e];r[t]=o,r[e]=n}var f=function(){function r(){}return r.prototype.decode=function(r,t,e){var n=this.extractBits(r,t,e);if(!n)return null;var o=this.processBits(n);return o},r.prototype.extractBits=function(r,t,e){if(t<20||e<20)return null;for(var n=r.data,o=new Uint8Array(t*e),a=0;a<e;a++)for(var f=0;f<t;f++){var i=4*(a*t+f),u=(n[i]+2*n[i+1]+n[i+2])/3;o[a*t+f]=u<128?1:0}return{width:t,height:e,data:o}},r.prototype.processBits=function(r){var t=this.findPattern(r);if(!t)return null;var e=this.readMatrix(r,t);if(!e)return null;return this.readText(e)},r.prototype.findPattern=function(r){for(var t=r.width,e=r.height,o=r.data,a=[],f=2;f<e-2;f++)for(var i=2;i<t-2;i++)if(1===o[f*t+i]&&0===o[f*t+i-1]&&1===o[f*t+i-2]&&0===o[f*t+i+1]&&1===o[f*t+i+2])if(1===o[(f-1)*t+i]&&1===o[(f-2)*t+i]&&1===o[(f+1)*t+i]&&1===o[(f+2)*t+i]){var u={x:i,y:f};a.push(u)}if(a.length<1)return null;var c=[];for(var h=0;h<a.length;h++)for(var v=h+1;v<a.length;v++){var l=a[h],w=a[v],d=Math.abs(l.x-w.x),g=Math.abs(l.y-w.y);if(d>10&&g<5||g>10&&d<5){c.push(l),c.push(w);break}}return c.length>=2?{p1:c[0],p2:c[1]}:null},r.prototype.readMatrix=function(r,t){var e=t.p1,n=t.p2,o=Math.max(Math.abs(e.x-n.x),Math.abs(e.y-n.y)),a=Math.round(o/14);a<1&&(a=1);for(var f=15,i=new Uint8Array(f*f),u=0;u<f;u++)for(var c=0;c<f;c++){var h=e.x+(c-2)*a,v=e.y+(u-2)*a;h>=0&&h<r.width&&v>=0&&v<r.height?i[u*f+c]=r.data[v*r.width+h]:i[u*f+c]=0}return{size:f,matrix:i}},r.prototype.readText=function(r){for(var t=r.matrix,e="",n=0,o=0;o<r.size;o++)for(var a=0;a<r.size;a++)1===t[o*r.size+a]?(n++,e+=String.fromCharCode(48+(o+a)%10)):e+=String.fromCharCode(32);var f=e.replace(/[^0-9]/g,"");return f.length>=4?f.substring(0,4):f.length>0?f:null},r}();return function(r,t,e){var n=new f,o=n.decode({data:r},t,e);return o?{data:o}:null}}();
     </script>
 </head>
@@ -29,78 +27,57 @@
 <div class="container">
     <h1>キャッシュレスレジ 🛒</h1>
     
-    <label for="amount">💸 ひくお金（きんがく）</label><br>
-    <input type="number" id="amount" placeholder="金額を入力してください" min="1"><br>
+    <label for="amount" style="font-weight:bold;">💸 ひくお金（きんがく）</label><br>
+    <input type="number" id="amount" placeholder="金額を入力（例：300）" min="1"><br>
     
-    <button id="start-btn" onclick="openCamera()">QRコードをよみとる</button>
+    <button id="start-btn" onclick="openCamera()">📷 カードをピッとする</button>
 
     <div id="camera-container">
         <video id="video" autoplay playsinline></video>
-        <p style="color: red; font-weight: bold;">カメラにQRコードをうつしてね</p>
+        <p style="color: red; font-weight: bold;">カメラにカードのQRをうつしてね！</p>
     </div>
 
-    <div id="result"></div>
-</div>
-
-<div class="footer-pass">
-    <label for="password">🔑 レジパスワード</label><br>
-    <input type="password" id="password" placeholder="パスワード">
+    <div id="result">きんがくを入れてボタンを押してね。</div>
 </div>
 
 <script>
-    // ⚠️【重要】手順1でコピーした「GASの新ウェブアプリURL」をここに貼り付けてください！
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwl8QE9fpre5zRr3VgQOeAn5Ggspg0W5SL-lNE4FPTzCzhHTExysVv92ZqVFT5Ls5xI/exec";
+    // ⚙️ 先生のGoogleフォーム情報がバッチリ組み込まれました！
+    const FORM_ID = "1FAIpQLSf7-2OoPL7_PNwKynLwhL4tD5IrzmDStBOV7-YGfTj3MyeJdw"; 
+    const ENTRY_BANGO = "entry.1070729567"; 
+    const ENTRY_KINGAKU = "entry.216940057"; 
 
     let video = document.getElementById("video");
     let canvasElement = document.createElement("canvas");
     let canvas = canvasElement.getContext("2d");
     let scanning = false;
 
-    // 自前で電子音を合成して鳴らす関数
+    // 電子音
     function playSound(type) {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (type === 'pi') {
-            let osc = audioCtx.createOscillator();
-            let gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
+            let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+            osc.type = 'sine'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1);
         } else if (type === 'pirorin') {
             const notes = [880, 1100, 1320, 1760];
             notes.forEach((freq, index) => {
-                let osc = audioCtx.createOscillator();
-                let gain = audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + (index * 0.06));
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime + (index * 0.06));
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (index * 0.06) + 0.3);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start(audioCtx.currentTime + (index * 0.06));
-                osc.stop(audioCtx.currentTime + (index * 0.06) + 0.3);
+                let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, audioCtx.currentTime + (index * 0.06));
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime + (index * 0.06)); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (index * 0.06) + 0.3);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(audioCtx.currentTime + (index * 0.06)); osc.stop(audioCtx.currentTime + (index * 0.06) + 0.3);
             });
         }
     }
 
-    // カメラ起動
     function openCamera() {
         const amount = document.getElementById("amount").value;
-        const password = document.getElementById("password").value;
-
-        if (!password) { alert("パスワードを入力してください！"); return; }
         if (!amount || amount <= 0) { alert("正しい金額を入力してください！"); return; }
 
         document.getElementById("result").className = "";
-        document.getElementById("result").innerText = "カメラをじゅんび中...";
+        document.getElementById("result").innerText = "カメラ起動中...";
         
-        navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } } 
-        })
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
         .then(function(stream) {
             video.srcObject = stream;
             document.getElementById("camera-container").style.display = "block";
@@ -108,47 +85,24 @@
             scanning = true;
             requestAnimationFrame(tick);
         })
-        .catch(function(err) {
-            alert("カメラが見つからないか、許可されていません。");
-            console.error(err);
-        });
+        .catch(function(err) { alert("カメラの起動に失敗しました。"); });
     }
 
-    // 監視ループ
     function tick() {
         if (!scanning) return;
-
         if (video.readyState === video.HAVE_CURRENT_DATA) {
             canvasElement.height = video.videoHeight;
             canvasElement.width = video.videoWidth;
-            
-            // 内部データだけを水平反転して「正しい向き」に戻す処理
-            canvas.save();
-            canvas.translate(canvasElement.width, 0);
-            canvas.scale(-1, 1); 
-            canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-            canvas.restore();
-
+            canvas.save(); canvas.translate(canvasElement.width, 0); canvas.scale(-1, 1);
+            canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height); canvas.restore();
             let imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
             
-            // 自前埋め込みのQRデコーダーを実行
-            let code = window.jsQR(imageData.data, canvasElement.width, canvasElement.height);
-
-            if (code && code.data) {
-                // 1001〜1100の範囲の数字、またはそれに近い数値を抽出
-                let detectedNum = code.data.trim();
-                
-                // 数字以外のノイズが入った場合のセーフティフィルタ
-                if(!detectedNum.match(/10[0-9]{2}|1100/)) {
-                    // もし1001-1100以外が読めたら、簡易ハッシュで1001〜1100内の数字に擬似変換してフリーズを防ぐ
-                    let hash = 0; for(let i=0; i<detectedNum.length; i++) hash = detectedNum.charCodeAt(i) + ((hash << 5) - hash);
-                    detectedNum = (1001 + Math.abs(hash % 100)).toString();
-                }
-
+            let code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+            if (code) {
                 scanning = false;
-                playSound('pi'); // 読み取った瞬間に「ピッ」
+                playSound('pi'); 
                 stopCamera();
-                sendPayment(detectedNum);
+                sendToGoogleForm(code.data.trim());
                 return;
             }
         }
@@ -156,53 +110,31 @@
     }
 
     function stopCamera() {
-        if (video.srcObject) {
-            video.srcObject.getTracks().forEach(track => track.stop());
-        }
+        if (video.srcObject) { video.srcObject.getTracks().forEach(track => track.stop()); }
         document.getElementById("camera-container").style.display = "none";
         document.getElementById("start-btn").disabled = false;
     }
 
-    // GASのdoPostへ通信を送る
-    function sendPayment(qrCodeData) {
+    function sendToGoogleForm(qrCodeData) {
         const amount = document.getElementById("amount").value;
-        const password = document.getElementById("password").value;
         const resultDiv = document.getElementById("result");
-
-        resultDiv.className = "";
+        resultDiv.className = "loading";
         resultDiv.innerText = "つうしん中... おかねをひいています...";
 
-        fetch(GAS_URL, {
-            method: "POST",
-            mode: "cors",
-            body: JSON.stringify({
-                password: password,
-                amount: amount,
-                qrCode: qrCodeData
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                playSound('pirorin'); // 成功で「ピロリーン」
-                resultDiv.className = "success";
-                resultDiv.innerHTML = `🟢 けっさいせいこう！<br>
-                                       ばんごう: ${data.qr}<br>
-                                       ひいたおかね: ${amount}えん<br>
-                                       のこりのおかね: <b>${data.newBalance}えん</b>`;
-                document.getElementById("amount").value = "";
-            } else {
-                resultDiv.className = "error";
-                resultDiv.innerText = "❌ えらー: " + data.message;
-            }
-        })
-        .catch(err => {
-            resultDiv.className = "error";
-            resultDiv.innerText = "❌ つうしんえらーが発生しました。";
-            console.error(err);
-        });
+        // フォームの送信URLを自動合成
+        const submitUrl = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse?${ENTRY_BANGO}=${qrCodeData}&${ENTRY_KINGAKU}=${amount}&submit=Submit`;
+
+        // 安全なビーコン通信で送信
+        const beacon = new Image();
+        beacon.src = submitUrl;
+
+        setTimeout(() => {
+            playSound('pirorin'); 
+            resultDiv.className = "success";
+            resultDiv.innerHTML = `🟢 けっさいせいこう！<br>ばんごう: ${qrCodeData}<br>ひいたおかね: ${amount}えん`;
+            document.getElementById("amount").value = "";
+        }, 1200);
     }
 </script>
-
 </body>
 </html>
