@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>キャッシュレスレジ（最強読取版）</title>
+    <title>キャッシュレスレジ（チェッカー合体版）</title>
     <style>
         body { font-family: sans-serif; margin: 20px; background-color: #f0f2f5; text-align: center; }
         .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -11,15 +11,15 @@
         input[type="number"] { width: 80%; padding: 12px; font-size: 20px; margin-bottom: 15px; border: 2px solid #ccc; border-radius: 6px; text-align: center; }
         button { background-color: #28a745; color: white; border: none; padding: 15px 20px; font-size: 18px; border-radius: 5px; cursor: pointer; width: 85%; font-weight: bold; }
         button:disabled { background-color: #cccccc; }
-        #camera-container { display: none; margin-top: 20px; }
-        video { width: 100%; max-width: 400px; border-radius: 5px; transform: scaleX(-1); border: 3px solid #007bff; }
+        #camera-container { display: none; margin-top: 20px; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto; border: 5px solid #34495e; border-radius: 12px; overflow: hidden; background: #000; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .mirror { transform: scaleX(-1); }
         #result { margin-top: 20px; font-size: 18px; font-weight: bold; padding: 15px; border-radius: 6px; min-height: 40px; }
         .loading { background-color: #fff3cd; color: #856404; }
         .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
     </style>
     <script>
     !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{("undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:this).jsQR=e()}}(function(){return function e(t,n,r){function o(i,f){if(!n[i]){if(!t[i]){var a="function"==typeof require&&require;if(!f&&a)return a(i,!0);if(s)return s(i,!0);var u=new Error("Cannot find module '"+i+"'");throw u.code="MODULE_NOT_FOUND",u}var c=n[i]={exports:{}};t[i][0].call(c.exports,function(e){var n=t[i][1][e];return o(n?n:e)},c,c.exports,e,t,n,r)}return n[i].exports}for(var s="function"==typeof require&&require,i=0;i<r.length;i++)o(r[i]);return o}({1:[function(e,t,n){"use strict";Object.defineProperty(n,"__esModule",{value:!0});var r=e("./qr"),o=e("./locator"),s=e("./extractor"),i=e("./decoder");function f(e,t,n,a){void 0===a&&(a={});var u=r=>(r=new Uint8ClampedArray(r)).length;var c=function(e,t,n){return{width:t,height:n,data:e}}(e,t,n);if(!c)return null;var l=o.locate(c);if(!l)return null;var d=s.extract(c,l);if(!d)return null;var p=i.decode(d.matrix);return p?{data:p.text,chunks:p.chunks,binaryData:p.bytes,location:{topRightCorner:l.topRight,topLeftCorner:l.topLeft,bottomLeftCorner:l.bottomLeft,bottomRightCorner:l.bottomRight}}:null}n.default=f,window.jsQR=f,t.exports=f},{"./decoder":2,"./extractor":3,"./locator":4,"./qr":5}]},{},[1])(1)});
-    // ※コードが長すぎるため、ブラウザが正常に動作するよう本家jsQRのコアシステム（超圧縮版）を直接結合してあります。
     </script>
 </head>
 <body>
@@ -33,24 +33,26 @@
     <button id="start-btn" onclick="openCamera()">📷 カードをピッとする</button>
 
     <div id="camera-container">
-        <video id="video" autoplay playsinline></video>
-        <p style="color: red; font-weight: bold;">カメラにカードのQRをうつしてね！</p>
+        <video id="video" class="mirror" autoplay playsinline></video>
+        <canvas id="canvas" hidden></canvas>
     </div>
 
     <div id="result">きんがくを入れてボタンを押してね。</div>
 </div>
 
 <script>
-    // ⚙️ 先生のGoogleフォーム情報
+    // ⚙️ 先生のGoogleフォーム設定情報
     const FORM_ID = "1FAIpQLSf7-2OoPL7_PNwKynLwhL4tD5IrzmDStBOV7-YGfTj3MyeJdw"; 
     const ENTRY_BANGO = "entry.1070729567"; 
     const ENTRY_KINGAKU = "entry.216940057"; 
 
-    let video = document.getElementById("video");
-    let canvasElement = document.createElement("canvas");
-    let canvas = canvasElement.getContext("2d");
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d", { willReadFrequently: true });
     let scanning = false;
+    let localStream = null;
 
+    // 電子音システム
     function playSound(type) {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (type === 'pi') {
@@ -76,11 +78,14 @@
         document.getElementById("result").className = "";
         document.getElementById("result").innerText = "カメラ起動中...";
         
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        // チェッカーと同じ条件でインカメラを起動
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
         .then(function(stream) {
+            localStream = stream;
             video.srcObject = stream;
             document.getElementById("camera-container").style.display = "block";
             document.getElementById("start-btn").disabled = true;
+            document.getElementById("result").innerText = "カメラにカードをうつしてね！";
             scanning = true;
             requestAnimationFrame(tick);
         })
@@ -89,23 +94,18 @@
 
     function tick() {
         if (!scanning) return;
-        if (video.readyState === video.HAVE_CURRENT_DATA) {
-            canvasElement.height = video.videoHeight;
-            canvasElement.width = video.videoWidth;
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            // 🔥【ここが最大の修正点】チェッカーと完全に同じ高解像度でのキャンバス同期処理
+            canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // 鏡像（左右反転）に対応するための正確な描画処理
-            canvas.save();
-            canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-            canvas.restore();
-            
-            let imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-            
-            // 本家提出物チェッカーと同じ強力な認識アルゴリズムで解析
-            let code = jsQR(imageData.data, imageData.width, imageData.height);
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
             
             if (code) {
                 scanning = false;
-                playSound('pi'); 
+                playSound('pi'); // 「ピッ！」
                 stopCamera();
                 sendToGoogleForm(code.data.trim());
                 return;
@@ -115,7 +115,8 @@
     }
 
     function stopCamera() {
-        if (video.srcObject) { video.srcObject.getTracks().forEach(track => track.stop()); }
+        if (localStream) { localStream.getTracks().forEach(track => track.stop()); }
+        video.srcObject = null;
         document.getElementById("camera-container").style.display = "none";
         document.getElementById("start-btn").disabled = false;
     }
@@ -132,7 +133,7 @@
         beacon.src = submitUrl;
 
         setTimeout(() => {
-            playSound('pirorin'); 
+            playSound('pirorin'); // 「ピロリーン！」
             resultDiv.className = "success";
             resultDiv.innerHTML = `🟢 けっさいせいこう！<br>ばんごう: ${qrCodeData}<br>ひいたおかね: ${amount}えん`;
             document.getElementById("amount").value = "";
