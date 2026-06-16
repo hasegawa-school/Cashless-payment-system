@@ -23,11 +23,46 @@
         .phase-scan { background-color: #e3f2fd; color: #0d47a1; }
         .phase-pay { background-color: #ffe0b2; color: #e65100; }
         #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: bold; z-index: 1000; }
+
+        /* 🧾 レシートのスタイル */
+        #receiptModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
+        #receipt { background: white; width: 300px; padding: 20px 20px 60px 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; font-family: 'Courier New', Courier, monospace; transform: rotate(-1deg); animation: receiptPaper 0.5s ease-out; }
+        #receipt:after { content: ""; position: absolute; bottom: 0; left: 0; width: 100%; height: 20px; background: linear-gradient(-135deg, white 10px, transparent 0) 0 10px, linear-gradient(135deg, white 10px, transparent 0) 0 10px; background-size: 20px 20px; background-position: left bottom; }
+        @keyframes receiptPaper { from { transform: translateY(-50px) rotate(-1deg); opacity: 0; } to { transform: translateY(0) rotate(-1deg); opacity: 1; } }
+        .receipt-header { font-size: 20px; font-weight: bold; color: #4a90e2; margin-bottom: 5px; }
+        .receipt-char { font-size: 40px; margin: 10px 0; }
+        .receipt-date { font-size: 12px; color: #888; border-bottom: 1px dashed #ccc; padding-bottom: 5px; margin-bottom: 10px; }
+        .receipt-list { text-align: left; font-size: 14px; margin-bottom: 15px; max-height: 150px; overflow: hidden; }
+        .receipt-item { display: flex; justify-content: space-between; margin-bottom: 3px; }
+        .receipt-total { border-top: 2px solid #333; padding-top: 5px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; }
+        .receipt-pay-info { font-size: 12px; text-align: left; background: #f9f9f9; padding: 5px; margin-top: 10px; }
+        .receipt-stamp { position: absolute; bottom: 80px; right: 20px; color: #ff5a5f; font-weight: bold; font-size: 24px; border: 3px solid #ff5a5f; padding: 5px 10px; border-radius: 50%; opacity: 0.8; transform: rotate(15deg); font-family: 'Helvetica Neue', Arial, sans-serif; }
     </style>
 </head>
 <body>
 
     <div id="loadingOverlay">データを よみこんでいます...</div>
+
+    <div id="receiptModal">
+        <div id="receipt">
+            <div class="receipt-header">kodomo SHOP</div>
+            <div>★★★ りょうしゅうしょ ★★★</div>
+            <div class="receipt-char">🧸</div> <div class="receipt-date" id="receiptDate"></div>
+            
+            <div class="receipt-list" id="receiptList"></div>
+            
+            <div class="receipt-total">
+                <span>ごうけい</span>
+                <span><span id="receiptTotal">0</span> 円</span>
+            </div>
+            
+            <div class="receipt-pay-info" id="receiptPayInfo"></div>
+            
+            <div class="receipt-stamp">アタリ！</div>
+            
+            <button style="width: 100px; padding: 10px; font-size: 14px; position: absolute; bottom: -50px; left: 100px; background-color: #555;" onclick="closeReceipt()">× とじる</button>
+        </div>
+    </div>
 
     <h1>ごっこレジアプリ 🛒</h1>
     
@@ -51,27 +86,19 @@
 
     <script>
         // --- 1. グローバル変数の設定 ---
-        let itemMaster = {};       // 商品データ
-        let currentTotal = 0;      // 現在の合計金額
-        let currentPhase = "SCAN"; // "SCAN" または "PAY"
-        let isProcessing = false;  // 連打防止
+        let itemMaster = {};
+        let currentTotal = 0;
+        let currentPhase = "SCAN";
+        let isProcessing = false;
+        let html5QrcodeScanner = null; // カメラのスキャナーをグローバルに持つ
 
-        // 💳 10枚のカード（1001〜1010）の残高を別々に保存（一律 5000円からスタート）
-        // サイトを閉じるとこのメモリは消えるので、開くたびに5000円にリセットされます。
+        // 💳 10枚のカードの残高
         let cardBalances = {
-            1001: 5000,
-            1002: 5000,
-            1003: 5000,
-            1004: 5000,
-            1005: 5000,
-            1006: 5000,
-            1007: 5000,
-            1008: 5000,
-            1009: 5000,
-            1010: 5000
+            1001: 5000, 1002: 5000, 1003: 5000, 1004: 5000, 1005: 5000,
+            1006: 5000, 1007: 5000, 1008: 5000, 1009: 5000, 1010: 5000
         };
 
-        // --- 2. products.jsonから商品データを読み込む処理 ---
+        // --- 2. データ読み込み ---
         async function loadProducts() {
             try {
                 const response = await fetch('products.json');
@@ -90,31 +117,22 @@
         function playBeep(type) {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            osc.connect(gain); gain.connect(audioCtx.destination);
             
             if (type === "success") { // ピッ
                 osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
                 gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
             } else if (type === "pay") { // ペイペイ♪
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.1);
                 setTimeout(() => {
-                    const osc2 = audioCtx.createOscillator();
-                    osc2.connect(gain);
-                    osc2.frequency.setValueAtTime(1320, audioCtx.currentTime);
-                    osc2.start();
-                    osc2.stop(audioCtx.currentTime + 0.15);
+                    const osc2 = audioCtx.createOscillator(); osc2.connect(gain);
+                    osc2.frequency.setValueAtTime(1320, audioCtx.currentTime); osc2.start(); osc2.stop(audioCtx.currentTime + 0.15);
                 }, 120);
             } else if (type === "error") { // ブブー
-                osc.type = "sawtooth";
-                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.type = "sawtooth"; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
                 gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
             }
         }
 
@@ -145,57 +163,77 @@
                 if (code >= 1001 && code <= 1010) {
                     isProcessing = true;
 
-                    // スキャンされたカードの現在の残高を取得
                     let currentBalance = cardBalances[code];
 
                     if (currentBalance >= currentTotal) {
+                        // 💳 決済成功時の処理
                         playBeep("pay");
+                        cardBalances[code] -= currentTotal; // 残高を減らす
                         
-                        // そのカードの残高だけを引き算して上書き保存
-                        cardBalances[code] -= currentTotal; 
-                        
-                        // 画面に残高を表示して、緑の枠線を出す
+                        // 画面上の残高表示を更新して出す
                         document.getElementById("cardName").innerText = `💳 カード(${code}) のざんだか`;
                         document.getElementById("balanceAmount").innerText = cardBalances[code];
                         document.getElementById("balanceContainer").style.display = "block";
 
-                        setTimeout(() => {
-                            alert(`🎉 けっさい かんりょう！\nカード[${code}] ののこり: ${cardBalances[code]}円\nありがとうございました！`);
-                            resetRegister();
-                        }, 300);
+                        // カメラを止めて、0.5秒後にレシートを出す
+                        html5QrcodeScanner.pause();
+                        setTimeout(() => { showReceipt(code); }, 500);
                     } else {
                         playBeep("error");
-                        // 残高が足りない場合も、どのカードが足りないか表示する
-                        document.getElementById("cardName").innerText = `❌ カード(${code}) のざんだか（おまねが足りないよ）`;
+                        document.getElementById("cardName").innerText = `❌ カード(${code}) おまねが足りないよ`;
                         document.getElementById("balanceAmount").innerText = currentBalance;
                         document.getElementById("balanceContainer").style.display = "block";
-                        
-                        alert(`❌ カード[${code}] のおかねが たりないよ！\n（残高: ${currentBalance}円 / 合計: ${currentTotal}円）`);
+                        alert(`❌ カード[${code}] のおかねが たりないよ！`);
                         isProcessing = false;
                     }
                 }
             }
         }
 
+        // --- 5. カート処理とレシート表示 ---
         function addCartItem(name, price) {
             currentTotal += price;
             document.getElementById("totalPrice").innerText = currentTotal;
-
             const li = document.createElement("li");
             li.className = "cart-item";
             li.innerHTML = `<span>${name}</span><span>${price}円</span>`;
             document.getElementById("cartList").appendChild(li);
-            
             const cartList = document.getElementById("cartList");
             cartList.scrollTop = cartList.scrollHeight;
         }
 
-        // --- 5. 状態切り替え ---
+        // 🧾 レシート画面を生成して表示する
+        function showReceipt(cardCode) {
+            // 今日の日付を入れる
+            const now = new Date();
+            document.getElementById("receiptDate").innerText = now.toLocaleString('ja-JP');
+            
+            // カートに入れた商品をレシートにコピーする
+            const cartItems = document.getElementById("cartList").innerHTML;
+            document.getElementById("receiptList").innerHTML = cartItems;
+            
+            // 合計金額を載せる
+            document.getElementById("receiptTotal").innerText = currentTotal;
+            
+            // 決済情報を載せる
+            document.getElementById("receiptPayInfo").innerHTML = 
+                `つかったカード: [${cardCode}]<br>カードののこり: ${cardBalances[cardCode]}円`;
+            
+            // レシート画面（モーダル）を表示する
+            document.getElementById("receiptModal").style.display = "flex";
+        }
+
+        // レシートを閉じる
+        function closeReceipt() {
+            document.getElementById("receiptModal").style.display = "none";
+            // アプリをリセットして、カメラを再開する
+            resetRegister();
+            html5QrcodeScanner.resume();
+        }
+
+        // --- 6. 状態切り替えとリセット ---
         function goToPayment() {
-            if (currentTotal === 0) {
-                alert("🛒 しょうひんを スキャンしてね！");
-                return;
-            }
+            if (currentTotal === 0) { alert("🛒 しょうひんを スキャンしてね！"); return; }
             currentPhase = "PAY";
             const banner = document.getElementById("phaseBanner");
             banner.innerText = "💳 けっさいカードを スキャンしてね";
@@ -204,25 +242,21 @@
         }
 
         function resetRegister() {
-            currentTotal = 0;
-            currentPhase = "SCAN";
+            currentTotal = 0; currentPhase = "SCAN";
             document.getElementById("totalPrice").innerText = "0";
             document.getElementById("cartList").innerHTML = "";
-            
-            // 決済用の残高表示をまた隠す
             document.getElementById("balanceContainer").style.display = "none";
-            
             const banner = document.getElementById("phaseBanner");
             banner.innerText = "🛒 しょうひんを スキャンしてね";
             banner.className = "phase-banner phase-scan";
-            
             document.getElementById("checkoutBtn").disabled = false;
             isProcessing = false;
         }
 
-        // --- 6. カメラの起動 ---
+        // --- 7. カメラの起動 ---
         function startCamera() {
-            const html5QrcodeScanner = new Html5QrcodeScanner(
+            // スキャナーをグローバル変数に代入
+            html5QrcodeScanner = new Html5QrcodeScanner(
                 "reader", { fps: 10, qrbox: 250 }, false
             );
             html5QrcodeScanner.render(onScanSuccess);
