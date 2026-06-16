@@ -11,7 +11,9 @@
         #reader { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .status-box { background: white; max-width: 400px; margin: 20px auto; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .price { font-size: 32px; font-weight: bold; color: #ff5a5f; }
-        .balance { font-size: 18px; color: #2ecc71; font-weight: bold; }
+        .balance-box { background-color: #e8f8f5; border: 2px dashed #2ecc71; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
+        .balance-title { font-size: 14px; color: #16a085; }
+        .balance { font-size: 22px; color: #27ae60; font-weight: bold; }
         .cart-list { text-align: left; max-width: 400px; margin: 10px auto; padding: 0; list-style: none; background: #fff; border-radius: 8px; max-height: 150px; overflow-y: auto; }
         .cart-item { padding: 10px 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
         button { background-color: #4a90e2; color: white; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; border-radius: 30px; cursor: pointer; box-shadow: 0 4px 6px rgba(74,144,226,0.3); transition: 0.2s; width: 80%; max-width: 300px; margin-top: 10px; }
@@ -38,44 +40,52 @@
     <div class="status-box">
         <div>ごうけい きんがく</div>
         <div class="price"><span id="totalPrice">0</span> 円</div>
-        <hr style="border: 0; border-top: 1px dashed #ccc; margin: 10px 0;">
-        <div class="balance">カードざんだか: <span id="balanceAmount">5000</span> 円</div>
+        
+        <div id="balanceContainer" class="balance-box">
+            <div class="balance-title" id="cardName">💳 カードのざんだか</div>
+            <div class="balance"><span id="balanceAmount">0</span> 円</div>
+        </div>
     </div>
 
     <button id="checkoutBtn" onclick="goToPayment()">💰 かいけいへ</button>
 
     <script>
         // --- 1. グローバル変数の設定 ---
-        let itemMaster = {};       // products.jsonから読み込んだデータを格納する空の箱
-        let initialBalance = 5000; // 決済カードの初期残高
+        let itemMaster = {};       // 商品データ
         let currentTotal = 0;      // 現在の合計金額
-        let currentPhase = "SCAN"; // "SCAN"（商品スキャン） または "PAY"（決済待ち）
-        let isProcessing = false;  // 連続読み込み防止フラグ
+        let currentPhase = "SCAN"; // "SCAN" または "PAY"
+        let isProcessing = false;  // 連打防止
 
-        // 画面の初期化（残高表示）
-        document.getElementById("balanceAmount").innerText = initialBalance;
+        // 💳 10枚のカード（1001〜1010）の残高を別々に保存（一律 5000円からスタート）
+        // サイトを閉じるとこのメモリは消えるので、開くたびに5000円にリセットされます。
+        let cardBalances = {
+            1001: 5000,
+            1002: 5000,
+            1003: 5000,
+            1004: 5000,
+            1005: 5000,
+            1006: 5000,
+            1007: 5000,
+            1008: 5000,
+            1009: 5000,
+            1010: 5000
+        };
 
         // --- 2. products.jsonから商品データを読み込む処理 ---
         async function loadProducts() {
             try {
-                // 同じフォルダにある products.json を取得しにいく
                 const response = await fetch('products.json');
-                if (!response.ok) {
-                    throw new Error('ファイルの取得に失敗しました');
-                }
+                if (!response.ok) throw new Error('ファイルの取得に失敗しました');
                 itemMaster = await response.json();
-                
-                // 読み込みが成功したら、目隠し画面を消す
                 document.getElementById("loadingOverlay").style.display = "none";
-                // カメラを起動する
                 startCamera();
             } catch (error) {
                 console.error(error);
-                document.getElementById("loadingOverlay").innerText = "❌ 商品データのよみこみに しっぱいしました。ファイル名やJSONの書き方を確認してください。";
+                document.getElementById("loadingOverlay").innerText = "❌ 商品データのよみこみに しっぱいしました。";
             }
         }
 
-        // --- 3. 効果音の設定（ブラウザ標準の電子音を使用） ---
+        // --- 3. 効果音の設定 ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playBeep(type) {
             const osc = audioCtx.createOscillator();
@@ -83,23 +93,23 @@
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             
-            if (type === "success") { // ピッ（商品スキャン）
+            if (type === "success") { // ピッ
                 osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
                 gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.1);
-            } else if (type === "pay") { // ペイペイ♪（決済成功）
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime); // ラ
+            } else if (type === "pay") { // ペイペイ♪
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.1);
                 setTimeout(() => {
                     const osc2 = audioCtx.createOscillator();
                     osc2.connect(gain);
-                    osc2.frequency.setValueAtTime(1320, audioCtx.currentTime); // ミ
+                    osc2.frequency.setValueAtTime(1320, audioCtx.currentTime);
                     osc2.start();
                     osc2.stop(audioCtx.currentTime + 0.15);
                 }, 120);
-            } else if (type === "error") { // ブブー（エラー）
+            } else if (type === "error") { // ブブー
                 osc.type = "sawtooth";
                 osc.frequency.setValueAtTime(150, audioCtx.currentTime);
                 gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
@@ -110,53 +120,63 @@
 
         // --- 4. QRコード読み込み時の処理 ---
         function onScanSuccess(decodedText) {
-            if (isProcessing) return; // 連打防止
+            if (isProcessing) return;
             const code = parseInt(decodedText.trim());
+            if (isNaN(code)) return;
 
-            if (isNaN(code)) return; // 数字以外は無視
-
-            // 【A. 商品スキャンモードのとき】
+            // 【A. 商品スキャンモード】
             if (currentPhase === "SCAN") {
                 if (code >= 101 && code <= 200) {
                     isProcessing = true;
-
-                    // jsonにデータがあるか確認
                     const item = itemMaster[code];
                     
-                    // 名前が空、または登録されていない番号の場合は「なぞの商品」にする
                     if (!item || !item.name) {
                         playBeep("success");
-                        // 登録がなくても100円の仮商品として遊べるようにする
-                        addCartItem(`📦 しょうひん(${code})`, 100);
+                        addCartItem(`📦 しょうひん(ID:${code})`, 100);
                     } else {
                         playBeep("success");
                         addCartItem(item.name, item.price);
                     }
-                    
-                    setTimeout(() => { isProcessing = false; }, 1500); // 1.5秒後に次の読み込みを許可
+                    setTimeout(() => { isProcessing = false; }, 1500);
                 }
             } 
-            // 【B. 決済モードのとき】
+            // 【B. 決済モード】
             else if (currentPhase === "PAY") {
                 if (code >= 1001 && code <= 1010) {
                     isProcessing = true;
 
-                    if (initialBalance >= currentTotal) {
+                    // スキャンされたカードの現在の残高を取得
+                    let currentBalance = cardBalances[code];
+
+                    if (currentBalance >= currentTotal) {
                         playBeep("pay");
-                        initialBalance -= currentTotal;
-                        document.getElementById("balanceAmount").innerText = initialBalance;
-                        alert(`🎉 けっさい かんりょう！\nおつり（のこり）: ${initialBalance}円\nありがとうございました！`);
-                        resetRegister();
+                        
+                        // そのカードの残高だけを引き算して上書き保存
+                        cardBalances[code] -= currentTotal; 
+                        
+                        // 画面に残高を表示して、緑の枠線を出す
+                        document.getElementById("cardName").innerText = `💳 カード(${code}) のざんだか`;
+                        document.getElementById("balanceAmount").innerText = cardBalances[code];
+                        document.getElementById("balanceContainer").style.display = "block";
+
+                        setTimeout(() => {
+                            alert(`🎉 けっさい かんりょう！\nカード[${code}] ののこり: ${cardBalances[code]}円\nありがとうございました！`);
+                            resetRegister();
+                        }, 300);
                     } else {
                         playBeep("error");
-                        alert("❌ おかねが たりないよ！");
+                        // 残高が足りない場合も、どのカードが足りないか表示する
+                        document.getElementById("cardName").innerText = `❌ カード(${code}) のざんだか（おまねが足りないよ）`;
+                        document.getElementById("balanceAmount").innerText = currentBalance;
+                        document.getElementById("balanceContainer").style.display = "block";
+                        
+                        alert(`❌ カード[${code}] のおかねが たりないよ！\n（残高: ${currentBalance}円 / 合計: ${currentTotal}円）`);
                         isProcessing = false;
                     }
                 }
             }
         }
 
-        // カートに要素を追加する補助関数
         function addCartItem(name, price) {
             currentTotal += price;
             document.getElementById("totalPrice").innerText = currentTotal;
@@ -170,7 +190,7 @@
             cartList.scrollTop = cartList.scrollHeight;
         }
 
-        // --- 5. 画面のモード切り替え・リセット ---
+        // --- 5. 状態切り替え ---
         function goToPayment() {
             if (currentTotal === 0) {
                 alert("🛒 しょうひんを スキャンしてね！");
@@ -189,6 +209,9 @@
             document.getElementById("totalPrice").innerText = "0";
             document.getElementById("cartList").innerHTML = "";
             
+            // 決済用の残高表示をまた隠す
+            document.getElementById("balanceContainer").style.display = "none";
+            
             const banner = document.getElementById("phaseBanner");
             banner.innerText = "🛒 しょうひんを スキャンしてね";
             banner.className = "phase-banner phase-scan";
@@ -205,7 +228,6 @@
             html5QrcodeScanner.render(onScanSuccess);
         }
 
-        // アプリ起動時に最初にjsonデータを読み込む
         window.onload = loadProducts;
     </script>
 </body>
