@@ -1,318 +1,42 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <base target="_top">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: "Segoe UI", "Noto Sans JP", sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 24px 16px 80px;
-      background: #f4f7fb;
-      color: #172033;
-    }
-    h1 { margin: 0 0 16px; }
-    .panel {
-      width: min(520px, 100%);
-      margin: 0 auto 16px;
-      padding: 18px;
-      background: white;
-      border-radius: 18px;
-      box-shadow: 0 4px 18px rgba(0,0,0,.08);
-    }
-    #reader {
-      width: 100%;
-      overflow: hidden;
-      border-radius: 14px;
-    }
-    #scanMessage {
-      margin: 12px 0 0;
-      padding: 12px;
-      border-radius: 12px;
-      background: #dbeafe;
-      color: #1e40af;
-      font-size: 20px;
-      font-weight: bold;
-    }
-    .input-large {
-      font-size: 32px;
-      padding: 10px;
-      width: 220px;
-      max-width: 100%;
-      text-align: center;
-      border: 2px solid #b9c5d6;
-      border-radius: 10px;
-    }
-    .button {
-      font-size: 26px;
-      padding: 12px 28px;
-      margin-top: 14px;
-      background: #007bff;
-      border: none;
-      border-radius: 10px;
-      color: white;
-      cursor: pointer;
-    }
-    .button:disabled { background: #888; cursor: not-allowed; }
-    #result { font-size: 36px; font-weight: bold; }
-    #salesToday { font-size: 24px; color: #444; }
-    #pw-box {
-      width: min(320px, calc(100% - 32px));
-      margin: 18px auto 0;
-    }
-    #password {
-      width: 100%;
-      padding: 10px;
-      font-size: 18px;
-      text-align: center;
-      border: 1px solid #b9c5d6;
-      border-radius: 10px;
-    }
-    .sub { color: #657084; }
-    #copyright {
-      position: fixed;
-      bottom: 8px;
-      left: 0;
-      width: 100%;
-      font-size: 12px;
-      color: #888;
-      pointer-events: none;
-    }
-  </style>
-</head>
-<body>
-  <h1>キャッシュレス レジ</h1>
+<!DOCTYPE html><html lang="ja"><head><base target="_top"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script><style>
+:root{--b:#1677ff;--g:#079669;--r:#dc2626;--s:#64748b}*{box-sizing:border-box}body{font-family:"Segoe UI","Noto Sans JP",sans-serif;margin:0;padding:20px 14px 65px;background:#f3f6fb;color:#172033}.page{max-width:1050px;margin:auto}.center{max-width:590px;text-align:center}.panel,.stat,.card{background:#fff;border-radius:16px;padding:17px;margin-bottom:14px;box-shadow:0 3px 14px #0001}.button{font:inherit;font-size:19px;font-weight:bold;padding:11px 19px;border:0;border-radius:10px;background:var(--b);color:#fff;cursor:pointer}.button:disabled{background:#94a3b8}.secondary{background:var(--s)}.danger{background:var(--r)}.green{background:var(--g)}input,select{font:inherit;padding:11px;border:1px solid #bdc7d6;border-radius:9px}.large{font-size:32px;width:240px;max-width:100%;text-align:center}.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.hidden{display:none!important}#reader{width:100%;overflow:hidden;border-radius:13px}.controls{display:flex;justify-content:center;gap:8px;margin-top:10px}.controls .button{font-size:14px;padding:9px}.mirror video{transform:scaleX(-1)!important}#scanMessage{padding:11px;margin-top:10px;background:#dbeafe;color:#1e40af;border-radius:10px;font-weight:bold}.money{font-size:25px;font-weight:800;color:#047857}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}.stat{margin:0}.stat small{display:block;color:#64748b}.stat b{font-size:20px}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:9px}.card{margin:0;border:1px solid #e2e8f0}.modal{position:fixed;inset:0;background:#0009;z-index:9;display:flex;align-items:center;justify-content:center;padding:15px}.dialog{background:#fff;padding:20px;border-radius:15px;width:min(440px,100%)}.table{overflow:auto;max-height:380px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:8px;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-align:left}a.button{text-decoration:none}.note{font-size:13px;color:#64748b}#copyright{position:fixed;bottom:7px;left:0;width:100%;text-align:center;font-size:12px;color:#888;pointer-events:none}@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}@media print{body>*{display:none!important}#qrPrint{display:grid!important;grid-template-columns:repeat(4,1fr);gap:8px}.qr{display:block!important;text-align:center;border:1px solid #111;padding:8px;break-inside:avoid}.qr img{width:130px}}
+</style></head><body>
+<main id="registerPage" class="page center hidden"><h1>キャッシュレス レジ</h1>
+<section id="start" class="panel"><h2>QRカードでお会計</h2><input id="regPw" type="password" inputmode="numeric" placeholder="レジPW"><br><br><button class="button" onclick="begin()">会計を始める</button></section>
+<section id="camera" class="panel hidden"><h2>QRを読み取ってください</h2><div id="reader"></div><div id="camControls" class="controls hidden"><button class="button secondary" onclick="switchCam()">📷 カメラ切り替え</button><button id="mirrorButton" class="button secondary" onclick="mirror()">↔ 左右反転</button></div><div id="scanMessage">準備中…</div><br><button class="button secondary" onclick="finish()">とりけし</button></section>
+<section id="sales" class="panel">このレジの今日の売上：0円</section>
+<section id="pay" class="panel hidden"><h2 id="cardId"></h2><h3 id="cardName"></h3><div class="money">残高：<span id="balance"></span>円</div><p><input id="price" class="large" type="number" inputmode="numeric" min="0" placeholder="お会計" onkeydown="if(event.key==='Enter')payment()"></p><button id="payButton" class="button green" onclick="payment()">Pay</button> <button class="button secondary" onclick="finish()">もどる</button></section>
+<section id="result" class="panel hidden" style="font-size:32px;font-weight:bold;white-space:pre-line"></section></main>
 
-  <div id="card-area" class="panel">
-    <h2>カードのQRを読み取ってください</h2>
-    <p class="sub">カメラの枠の中にQRコードを映します。</p>
-    <div id="reader"></div>
-    <div id="scanMessage">カメラを準備しています…</div>
-    <button id="cameraRetryBtn" class="button" style="display:none" onclick="startCamera()">
-      カメラを再開
-    </button>
-  </div>
-
-  <div id="salesToday" class="panel">このレジの今日の売上：0 円</div>
-
-  <div id="pay-area" class="panel" style="display:none;">
-    <h2 id="cardNumberDisplay"></h2>
-    <h3>残高：<span id="balanceDisplay"></span> 円</h3>
-    <input id="payment" type="number" inputmode="numeric" min="0" step="1"
-      class="input-large" placeholder="お会計"
-      onkeydown="if(event.key==='Enter') doPayment()">
-    <br>
-    <button id="payBtn" class="button" onclick="doPayment()">Pay</button>
-    <button class="button" style="background:#64748b" onclick="cancelPayment()">もどる</button>
-  </div>
-
-  <div id="result" class="panel" style="display:none;"></div>
-
-  <div id="pw-box">
-    <input id="password" type="password" placeholder="レジPW">
-  </div>
-
-  <div id="copyright">© 2026 Hasegawa Konosuke. All rights reserved.</div>
-
-  <script>
-    let todaySales = 0;
-    let currentCard = "";
-    let scanner = null;
-    let cameraRunning = false;
-    let scanLocked = false;
-
-    function runServer(functionName, ...args) {
-      return new Promise((resolve, reject) => {
-        google.script.run
-          .withSuccessHandler(resolve)
-          .withFailureHandler(error => reject(new Error(error.message || error)))
-          [functionName](...args);
-      });
-    }
-
-    async function startCamera() {
-      if (cameraRunning) return;
-
-      const password = document.getElementById("password").value;
-      document.getElementById("cameraRetryBtn").style.display = "none";
-      setScanMessage(password ? "カメラを起動しています…" : "左下のレジPWを入力してください。", false);
-
-      try {
-        if (!scanner) scanner = new Html5Qrcode("reader");
-        const cameras = await Html5Qrcode.getCameras();
-        if (!cameras.length) throw new Error("カメラが見つかりません。");
-
-        const rearCamera = cameras.find(camera =>
-          /back|rear|environment|背面/i.test(camera.label)
-        );
-        const cameraId = rearCamera ? rearCamera.id : cameras[0].id;
-
-        await scanner.start(
-          cameraId,
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          onScanSuccess,
-          function () {}
-        );
-        cameraRunning = true;
-        setScanMessage("カードのQRを読み取ってください。", false);
-      } catch (error) {
-        cameraRunning = false;
-        setScanMessage("カメラを起動できません。カメラの使用を許可してください。", true);
-        document.getElementById("cameraRetryBtn").style.display = "inline-block";
-        console.error(error);
-      }
-    }
-
-    async function stopCamera() {
-      if (!scanner || !cameraRunning) return;
-      try { await scanner.stop(); } catch (error) { console.error(error); }
-      cameraRunning = false;
-    }
-
-    async function onScanSuccess(decodedText) {
-      if (scanLocked) return;
-      scanLocked = true;
-
-      // QRコードの中身は「1」～「100」の数字だけにします。
-      const cardText = String(decodedText).trim();
-      if (!/^\d+$/.test(cardText)) {
-        setScanMessage("このQRはカードではありません。", true);
-        setTimeout(() => { scanLocked = false; setScanMessage("カードのQRを読み取ってください。", false); }, 1500);
-        return;
-      }
-
-      const cardNumber = Number(cardText);
-      if (!Number.isInteger(cardNumber) || cardNumber < 1 || cardNumber > 100) {
-        setScanMessage("カード番号は1～100です。", true);
-        setTimeout(() => { scanLocked = false; setScanMessage("カードのQRを読み取ってください。", false); }, 1500);
-        return;
-      }
-
-      const password = document.getElementById("password").value;
-      if (!password) {
-        setScanMessage("左下のレジPWを入力してください。", true);
-        setTimeout(() => { scanLocked = false; }, 1500);
-        return;
-      }
-
-      setScanMessage("カードを確認しています…", false);
-      try {
-        const passwordOk = await runServer("checkPassword", password);
-        if (!passwordOk) {
-          alert("パスワードがちがいます。");
-          setScanMessage("レジPWを確認してください。", true);
-          setTimeout(() => { scanLocked = false; }, 1500);
-          return;
-        }
-
-        const balance = await runServer("getBalance", cardNumber);
-        currentCard = String(cardNumber);
-        await stopCamera();
-        playSound("https://pocket-se.info/se/barcode.mp3");
-
-        document.getElementById("salesToday").style.display = "none";
-        document.getElementById("card-area").style.display = "none";
-        document.getElementById("cardNumberDisplay").textContent = "カード番号: " + currentCard;
-        document.getElementById("balanceDisplay").textContent = Number(balance).toLocaleString();
-        document.getElementById("pay-area").style.display = "block";
-        document.getElementById("payment").focus();
-      } catch (error) {
-        alert(error.message);
-        scanLocked = false;
-        setScanMessage("もう一度読み取ってください。", true);
-      }
-    }
-
-    async function doPayment() {
-      const payButton = document.getElementById("payBtn");
-      if (payButton.disabled) return;
-
-      const paymentInput = document.getElementById("payment");
-      const pay = Number(paymentInput.value);
-      const password = document.getElementById("password").value;
-
-      if (paymentInput.value === "" || !Number.isInteger(pay) || pay < 0) {
-        alert("正しいお会計金額を入力してください。");
-        return;
-      }
-      if (pay === 0) {
-        showResult("とりけしました。", false);
-        return;
-      }
-
-      payButton.disabled = true;
-      playSound("https://pocket-se.info/se/barcode.mp3");
-
-      try {
-        const result = await runServer("processPayment", password, currentCard, pay);
-        if (!result.success) {
-          alert(result.message);
-          if (typeof result.balance === "number") {
-            document.getElementById("balanceDisplay").textContent = result.balance.toLocaleString();
-          }
-          payButton.disabled = false;
-          return;
-        }
-
-        todaySales += pay;
-        updateSalesDisplay();
-        playSound("https://pocket-se.info/se/itemget5.mp3");
-        showResult("残高：" + Number(result.newBalance).toLocaleString() + " 円", true);
-      } catch (error) {
-        alert(error.message);
-        payButton.disabled = false;
-      }
-    }
-
-    function showResult(message, paid) {
-      document.getElementById("pay-area").style.display = "none";
-      const result = document.getElementById("result");
-      result.style.display = "block";
-      result.textContent = paid ? "お会計できました！\n" + message : message;
-      result.style.whiteSpace = "pre-line";
-      setTimeout(resetScreen, 2500);
-    }
-
-    function cancelPayment() {
-      document.getElementById("pay-area").style.display = "none";
-      document.getElementById("result").style.display = "block";
-      document.getElementById("result").textContent = "とりけしました。";
-      setTimeout(resetScreen, 1000);
-    }
-
-    async function resetScreen() {
-      currentCard = "";
-      scanLocked = false;
-      document.getElementById("result").style.display = "none";
-      document.getElementById("card-area").style.display = "block";
-      document.getElementById("payment").value = "";
-      document.getElementById("payBtn").disabled = false;
-      document.getElementById("salesToday").style.display = "block";
-      await startCamera();
-    }
-
-    function updateSalesDisplay() {
-      document.getElementById("salesToday").textContent =
-        "このレジの今日の売上：" + todaySales.toLocaleString() + " 円";
-    }
-
-    function setScanMessage(message, isError) {
-      const box = document.getElementById("scanMessage");
-      box.textContent = message;
-      box.style.background = isError ? "#fee2e2" : "#dbeafe";
-      box.style.color = isError ? "#991b1b" : "#1e40af";
-    }
-
-    function playSound(url) {
-      const audio = new Audio(url);
-      audio.play().catch(error => console.log("音声再生エラー:", error));
-    }
-
-    window.addEventListener("load", startCamera);
-  </script>
-</body>
-</html>
+<main id="adminPage" class="page hidden"><div class="row"><h1 style="margin-right:auto">キャッシュレス管理</h1><a class="button secondary" href="?">レジへ</a></div>
+<section id="adminLogin" class="panel"><h2>管理者ログイン</h2><div class="row"><input id="adminPw" type="password" inputmode="numeric" placeholder="管理者PW"><button class="button" onclick="login()">ログイン</button></div></section>
+<div id="dashboard" class="hidden"><div class="stats"><div class="stat"><small>全残高</small><b>¥<span id="total">0</span></b></div><div class="stat"><small>平均</small><b>¥<span id="average">0</span></b></div><div class="stat"><small>最少</small><b>¥<span id="minimum">0</span></b></div><div class="stat"><small>最大</small><b>¥<span id="maximum">0</span></b></div><div class="stat"><small>今日の売上</small><b>¥<span id="todaySales">0</span></b></div></div>
+<section class="panel"><h2>全40枚を一括変更</h2><div class="row"><select id="bulkType"><option value="SET">指定額にする</option><option value="ADD">追加する</option><option value="SUBTRACT">減らす</option></select><input id="bulkAmount" type="number" min="0" value="1000"><input id="bulkNote" placeholder="メモ"><button class="button danger" onclick="bulk()">全カードに実行</button></div><p class="note">10,000円に統一→「指定額」／1,000円を配る→「追加」</p></section>
+<section class="panel"><div class="row"><h2 style="margin-right:auto">カード一覧</h2><input id="search" placeholder="ID・名前で検索" oninput="renderCards()"><button class="button secondary" onclick="loadAdmin()">更新</button><button class="button" onclick="printCards()">QR印刷</button></div><div id="cards" class="cards"></div></section>
+<section class="panel"><h2>パスワード変更</h2><div class="row"><input id="newPw" type="password" inputmode="numeric" placeholder="新しい数字4～12桁"><button class="button danger" onclick="changePw()">変更</button></div></section>
+<section class="panel"><h2>最近の取引履歴</h2><div class="table"><table><thead><tr><th>日時</th><th>処理</th><th>カード</th><th>増減</th><th>残高</th><th>メモ</th></tr></thead><tbody id="logs"></tbody></table></div></section></div></main>
+<div id="edit" class="modal hidden"><div class="dialog"><h2 id="editTitle"></h2><p><input id="editName" style="width:100%" placeholder="名前"></p><div class="row"><select id="editType"><option value="SET">指定額</option><option value="ADD">追加</option><option value="SUBTRACT">減額</option></select><input id="editAmount" type="number" min="0" value="1000"></div><p><input id="editNote" style="width:100%" placeholder="メモ"></p><button class="button" onclick="saveEdit()">保存</button> <button class="button secondary" onclick="closeEdit()">取消</button></div></div><div id="qrPrint" class="hidden"></div><div id="copyright">© 2026 Hasegawa Konosuke. All rights reserved.</div>
+<script>
+// GASをウェブアプリとして公開した後、その /exec URLをここに貼り付けます。
+const GAS_API_URL='ここにGASのウェブアプリURLを貼り付ける';
+const MODE=new URLSearchParams(location.search).get('mode')==='admin'?'admin':'register',$=id=>document.getElementById(id);let scanner,cams=[],camIndex=0,running=false,flipped=false,locked=false,current='',sales=0,authToken='',cardData=[],editing=0;
+function api(action,params={}){return new Promise((resolve,reject)=>{if(!/^https:\/\/script\.google\.com\//.test(GAS_API_URL))return reject(Error('index.htmlのGAS_API_URLを設定してください。'));const callback='gasCallback_'+Date.now()+'_'+Math.random().toString(36).slice(2),script=document.createElement('script'),timer=setTimeout(()=>finish(Error('通信がタイムアウトしました。')),15000);function finish(error,data){clearTimeout(timer);delete window[callback];script.remove();error?reject(error):resolve(data)}window[callback]=response=>response&&response.ok?finish(null,response.data):finish(Error(response&&response.error||'通信エラー'));const q=new URLSearchParams({action,callback,...params});script.src=GAS_API_URL+'?'+q.toString();script.onerror=()=>finish(Error('GAS APIに接続できません。公開設定を確認してください。'));document.head.appendChild(script)})}
+window.addEventListener('load',()=>$(MODE==='admin'?'adminPage':'registerPage').classList.remove('hidden'));
+async function begin(){if(!$('regPw').value)return alert('レジPWを入力してください。');try{authToken=(await api('login',{password:$('regPw').value})).token;$('start').classList.add('hidden');$('sales').classList.add('hidden');$('camera').classList.remove('hidden');await startCam()}catch(e){alert(e.message)}}
+async function startCam(){try{message('カメラを起動しています…');if(!scanner)scanner=new Html5Qrcode('reader');cams=await Html5Qrcode.getCameras();if(!cams.length)throw Error('カメラが見つかりません。');camIndex=Math.min(camIndex,cams.length-1);await scanner.start(cams[camIndex].id,{fps:10,qrbox:{width:250,height:250}},scan,()=>{});running=true;$('camControls').classList.remove('hidden');message('1001～1040のQRを読み取ってください。')}catch(e){message('カメラを許可してください。',true);alert(e.message)}}
+async function stopCam(){if(scanner&&running){try{await scanner.stop()}catch(e){}running=false}$('camControls').classList.add('hidden')}
+async function switchCam(){if(cams.length<2)return alert('切り替えられるカメラがありません。');await stopCam();camIndex=(camIndex+1)%cams.length;await startCam()}
+function mirror(){flipped=!flipped;$('reader').classList.toggle('mirror',flipped);$('mirrorButton').textContent=flipped?'↔ 反転を戻す':'↔ 左右反転'}
+async function scan(raw){if(locked)return;const id=String(raw).trim();if(!/^10(?:0[1-9]|[1-3][0-9]|40)$/.test(id)){locked=true;message('1001～1040のカードではありません。',true);setTimeout(()=>{locked=false;message('1001～1040のQRを読み取ってください。')},1300);return}locked=true;try{const c=await api('card',{token:authToken,cardId:id});current=id;await stopCam();tone(950);$('camera').classList.add('hidden');$('cardId').textContent='カード番号：'+c.id;$('cardName').textContent=c.name;$('balance').textContent=money(c.balance);$('pay').classList.remove('hidden');$('price').focus()}catch(e){alert(e.message);locked=false}}
+async function payment(){const n=Number($('price').value);if($('price').value===''||!Number.isInteger(n)||n<=0)return alert('正しい金額を入力してください。');$('payButton').disabled=true;try{const r=await api('pay',{token:authToken,cardId:current,amount:n,registerName:'Chromebookレジ'});if(!r.success){alert(r.message);if(r.balance!==undefined)$('balance').textContent=money(r.balance);$('payButton').disabled=false;return}sales+=n;tone(1300);$('pay').classList.add('hidden');$('result').classList.remove('hidden');$('result').textContent='お会計できました！\n残高：'+money(r.newBalance)+'円';setTimeout(finish,2500)}catch(e){alert(e.message);$('payButton').disabled=false}}
+async function finish(){await stopCam();current='';locked=false;$('camera').classList.add('hidden');$('pay').classList.add('hidden');$('result').classList.add('hidden');$('start').classList.remove('hidden');$('sales').classList.remove('hidden');$('sales').textContent='このレジの今日の売上：'+money(sales)+'円';$('price').value='';$('payButton').disabled=false}
+function message(t,e=false){$('scanMessage').textContent=t;$('scanMessage').style.background=e?'#fee2e2':'#dbeafe';$('scanMessage').style.color=e?'#991b1b':'#1e40af'}function tone(f){try{const a=new AudioContext,o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=f;g.gain.value=.08;o.start();o.stop(a.currentTime+.15)}catch(e){}}
+async function login(){try{authToken=(await api('login',{password:$('adminPw').value})).token;$('adminLogin').classList.add('hidden');$('dashboard').classList.remove('hidden');await loadAdmin()}catch(e){alert(e.message)}}
+async function loadAdmin(){try{const d=await api('adminData',{token:authToken});cardData=d.cards;for(const k of['total','average','minimum','maximum'])$(k).textContent=money(d.summary[k]);$('todaySales').textContent=money(d.summary.todaySales);renderCards();$('logs').innerHTML=d.logs.map(l=>`<tr><td>${esc(l.date)}</td><td>${esc(l.type)}</td><td>${esc(l.cardId)}</td><td>${l.change>0?'+':''}${money(l.change)}</td><td>${l.balance===''?'':money(l.balance)}</td><td>${esc(l.note)}</td></tr>`).join('')}catch(e){alert(e.message)}}
+function renderCards(){const q=$('search').value.trim().toLowerCase();$('cards').innerHTML=cardData.filter(c=>(c.id+' '+c.name).toLowerCase().includes(q)).map(c=>`<div class="card"><b>${c.id}</b><div>${esc(c.name)}</div><div class="money">¥${money(c.balance)}</div><button class="button" style="font-size:14px" onclick="openEdit(${c.id})">修正</button></div>`).join('')}
+function openEdit(id){const c=cardData.find(x=>x.id===id);editing=id;$('editTitle').textContent='カード'+id;$('editName').value=c.name;$('edit').classList.remove('hidden')}function closeEdit(){$('edit').classList.add('hidden')}
+async function saveEdit(){try{await api('updateOne',{token:authToken,cardId:editing,name:$('editName').value,type:$('editType').value,amount:$('editAmount').value,note:$('editNote').value});closeEdit();await loadAdmin();alert('変更しました。')}catch(e){alert(e.message)}}
+async function bulk(){const type=$('bulkType').value,n=Number($('bulkAmount').value);if(!confirm('40枚すべてを変更しますか？'))return;try{await api('updateAll',{token:authToken,type,amount:n,note:$('bulkNote').value});await loadAdmin();alert('40枚を変更しました。')}catch(e){alert(e.message)}}
+async function changePw(){const n=$('newPw').value;if(!confirm('レジ・管理パスワードを変更しますか？'))return;try{await api('changePassword',{token:authToken,newPassword:n});$('adminPw').value=n;$('newPw').value='';alert('変更しました。次回から新しいパスワードを使用してください。')}catch(e){alert(e.message)}}
+function printCards(){const a=$('qrPrint');a.innerHTML=cardData.map(c=>`<div class="qr"><b>${esc(c.name)}</b><br><img src="https://quickchart.io/qr?size=180&text=${c.id}"><br>${c.id}</div>`).join('');a.classList.remove('hidden');setTimeout(()=>{print();a.classList.add('hidden')},700)}function money(n){return Number(n).toLocaleString('ja-JP')}function esc(v){const d=document.createElement('div');d.textContent=String(v);return d.innerHTML}
+</script></body></html>
