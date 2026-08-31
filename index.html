@@ -1,264 +1,318 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>こどもレジアプリ</title>
-    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; margin: 0; padding: 20px; background-color: #f7f9fc; color: #333; }
-        h1 { font-size: 24px; color: #4a90e2; margin-bottom: 10px; }
-        #reader { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .status-box { background: white; max-width: 400px; margin: 20px auto; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .price { font-size: 32px; font-weight: bold; color: #ff5a5f; }
-        .balance-box { background-color: #e8f8f5; border: 2px dashed #2ecc71; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
-        .balance-title { font-size: 14px; color: #16a085; }
-        .balance { font-size: 22px; color: #27ae60; font-weight: bold; }
-        .cart-list { text-align: left; max-width: 400px; margin: 10px auto; padding: 0; list-style: none; background: #fff; border-radius: 8px; max-height: 150px; overflow-y: auto; }
-        .cart-item { padding: 10px 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
-        button { background-color: #4a90e2; color: white; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; border-radius: 30px; cursor: pointer; box-shadow: 0 4px 6px rgba(74,144,226,0.3); transition: 0.2s; width: 80%; max-width: 300px; margin-top: 10px; }
-        button:active { transform: scale(0.95); box-shadow: none; }
-        button:disabled { background-color: #ccc; box-shadow: none; }
-        .phase-banner { display: inline-block; padding: 5px 15px; border-radius: 15px; font-size: 14px; font-weight: bold; margin-bottom: 10px; }
-        .phase-scan { background-color: #e3f2fd; color: #0d47a1; }
-        .phase-pay { background-color: #ffe0b2; color: #e65100; }
-        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: bold; z-index: 1000; }
-
-        /* 🧾 レシートのスタイル */
-        #receiptModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
-        #receipt { background: white; width: 300px; padding: 20px 20px 60px 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; font-family: 'Courier New', Courier, monospace; transform: rotate(-1deg); animation: receiptPaper 0.5s ease-out; }
-        #receipt:after { content: ""; position: absolute; bottom: 0; left: 0; width: 100%; height: 20px; background: linear-gradient(-135deg, white 10px, transparent 0) 0 10px, linear-gradient(135deg, white 10px, transparent 0) 0 10px; background-size: 20px 20px; background-position: left bottom; }
-        @keyframes receiptPaper { from { transform: translateY(-50px) rotate(-1deg); opacity: 0; } to { transform: translateY(0) rotate(-1deg); opacity: 1; } }
-        .receipt-header { font-size: 20px; font-weight: bold; color: #4a90e2; margin-bottom: 5px; }
-        .receipt-char { font-size: 40px; margin: 10px 0; }
-        .receipt-date { font-size: 12px; color: #888; border-bottom: 1px dashed #ccc; padding-bottom: 5px; margin-bottom: 10px; }
-        
-        /* 🛒 レシート内の商品リスト（スクロール対応に強化） */
-        .receipt-list { text-align: left; font-size: 14px; margin-bottom: 15px; max-height: 180px; overflow-y: auto; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
-        .receipt-item { display: flex; justify-content: space-between; margin-bottom: 5px; padding-right: 5px; }
-        
-        .receipt-total { font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 5px; }
-        .receipt-pay-info { font-size: 12px; text-align: left; background: #f9f9f9; padding: 5px; margin-top: 10px; }
-    </style>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", "Noto Sans JP", sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 24px 16px 80px;
+      background: #f4f7fb;
+      color: #172033;
+    }
+    h1 { margin: 0 0 16px; }
+    .panel {
+      width: min(520px, 100%);
+      margin: 0 auto 16px;
+      padding: 18px;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    }
+    #reader {
+      width: 100%;
+      overflow: hidden;
+      border-radius: 14px;
+    }
+    #scanMessage {
+      margin: 12px 0 0;
+      padding: 12px;
+      border-radius: 12px;
+      background: #dbeafe;
+      color: #1e40af;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .input-large {
+      font-size: 32px;
+      padding: 10px;
+      width: 220px;
+      max-width: 100%;
+      text-align: center;
+      border: 2px solid #b9c5d6;
+      border-radius: 10px;
+    }
+    .button {
+      font-size: 26px;
+      padding: 12px 28px;
+      margin-top: 14px;
+      background: #007bff;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+    }
+    .button:disabled { background: #888; cursor: not-allowed; }
+    #result { font-size: 36px; font-weight: bold; }
+    #salesToday { font-size: 24px; color: #444; }
+    #pw-box {
+      width: min(320px, calc(100% - 32px));
+      margin: 18px auto 0;
+    }
+    #password {
+      width: 100%;
+      padding: 10px;
+      font-size: 18px;
+      text-align: center;
+      border: 1px solid #b9c5d6;
+      border-radius: 10px;
+    }
+    .sub { color: #657084; }
+    #copyright {
+      position: fixed;
+      bottom: 8px;
+      left: 0;
+      width: 100%;
+      font-size: 12px;
+      color: #888;
+      pointer-events: none;
+    }
+  </style>
 </head>
 <body>
+  <h1>キャッシュレス レジ</h1>
 
-    <div id="loadingOverlay">データを よみこんでいます...</div>
-
-    <div id="receiptModal">
-        <div id="receipt">
-            <div class="receipt-header">kodomo SHOP</div>
-            <div>★★★★★★ レシート ★★★★★★</div>
-            <div class="receipt-char">🧸</div>
-            <div class="receipt-date" id="receiptDate"></div>
-            
-            <div class="receipt-list" id="receiptList"></div>
-            
-            <div class="receipt-total">
-                <span>ごうけい</span>
-                <span><span id="receiptTotal">0</span> 円</span>
-            </div>
-            
-            <div class="receipt-pay-info" id="receiptPayInfo"></div>
-            
-            <button style="width: 100px; padding: 10px; font-size: 14px; position: absolute; bottom: -50px; left: 100px; background-color: #555;" onclick="closeReceipt()">× とじる</button>
-        </div>
-    </div>
-
-    <h1>ごっこレジアプリ 🛒</h1>
-    
-    <div id="phaseBanner" class="phase-banner phase-scan">🛒 しょうひんを スキャンしてね</div>
-
+  <div id="card-area" class="panel">
+    <h2>カードのQRを読み取ってください</h2>
+    <p class="sub">カメラの枠の中にQRコードを映します。</p>
     <div id="reader"></div>
+    <div id="scanMessage">カメラを準備しています…</div>
+    <button id="cameraRetryBtn" class="button" style="display:none" onclick="startCamera()">
+      カメラを再開
+    </button>
+  </div>
 
-    <ul id="cartList" class="cart-list"></ul>
+  <div id="salesToday" class="panel">このレジの今日の売上：0 円</div>
 
-    <div class="status-box">
-        <div>ごうけい きんがく</div>
-        <div class="price"><span id="totalPrice">0</span> 円</div>
-        
-        <div id="balanceContainer" class="balance-box">
-            <div class="balance-title" id="cardName">💳 カードのざんだか</div>
-            <div class="balance"><span id="balanceAmount">0</span> 円</div>
-        </div>
-    </div>
+  <div id="pay-area" class="panel" style="display:none;">
+    <h2 id="cardNumberDisplay"></h2>
+    <h3>残高：<span id="balanceDisplay"></span> 円</h3>
+    <input id="payment" type="number" inputmode="numeric" min="0" step="1"
+      class="input-large" placeholder="お会計"
+      onkeydown="if(event.key==='Enter') doPayment()">
+    <br>
+    <button id="payBtn" class="button" onclick="doPayment()">Pay</button>
+    <button class="button" style="background:#64748b" onclick="cancelPayment()">もどる</button>
+  </div>
 
-    <button id="checkoutBtn" onclick="goToPayment()">💰 かいけいへ</button>
+  <div id="result" class="panel" style="display:none;"></div>
 
-    <script>
-        // --- 1. グローバル変数の設定 ---
-        let itemMaster = {};
-        let currentTotal = 0;
-        let currentPhase = "SCAN";
-        let isProcessing = false;
-        let html5QrcodeScanner = null;
+  <div id="pw-box">
+    <input id="password" type="password" placeholder="レジPW">
+  </div>
 
-        // 💳 10枚のカードの残高
-        let cardBalances = {
-            1001: 5000, 1002: 5000, 1003: 5000, 1004: 5000, 1005: 5000,
-            1006: 5000, 1007: 5000, 1008: 5000, 1009: 5000, 1010: 5000
-        };
+  <div id="copyright">© 2026 Hasegawa Konosuke. All rights reserved.</div>
 
-        // --- 2. データ読み込み ---
-        async function loadProducts() {
-            try {
-                const response = await fetch('products.json');
-                if (!response.ok) throw new Error('ファイルの取得に失敗しました');
-                itemMaster = await response.json();
-                document.getElementById("loadingOverlay").style.display = "none";
-                startCamera();
-            } catch (error) {
-                console.error(error);
-                document.getElementById("loadingOverlay").innerText = "❌ 商品データのよみこみに しっぱいしました。";
-            }
+  <script>
+    let todaySales = 0;
+    let currentCard = "";
+    let scanner = null;
+    let cameraRunning = false;
+    let scanLocked = false;
+
+    function runServer(functionName, ...args) {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(error => reject(new Error(error.message || error)))
+          [functionName](...args);
+      });
+    }
+
+    async function startCamera() {
+      if (cameraRunning) return;
+
+      const password = document.getElementById("password").value;
+      document.getElementById("cameraRetryBtn").style.display = "none";
+      setScanMessage(password ? "カメラを起動しています…" : "左下のレジPWを入力してください。", false);
+
+      try {
+        if (!scanner) scanner = new Html5Qrcode("reader");
+        const cameras = await Html5Qrcode.getCameras();
+        if (!cameras.length) throw new Error("カメラが見つかりません。");
+
+        const rearCamera = cameras.find(camera =>
+          /back|rear|environment|背面/i.test(camera.label)
+        );
+        const cameraId = rearCamera ? rearCamera.id : cameras[0].id;
+
+        await scanner.start(
+          cameraId,
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          onScanSuccess,
+          function () {}
+        );
+        cameraRunning = true;
+        setScanMessage("カードのQRを読み取ってください。", false);
+      } catch (error) {
+        cameraRunning = false;
+        setScanMessage("カメラを起動できません。カメラの使用を許可してください。", true);
+        document.getElementById("cameraRetryBtn").style.display = "inline-block";
+        console.error(error);
+      }
+    }
+
+    async function stopCamera() {
+      if (!scanner || !cameraRunning) return;
+      try { await scanner.stop(); } catch (error) { console.error(error); }
+      cameraRunning = false;
+    }
+
+    async function onScanSuccess(decodedText) {
+      if (scanLocked) return;
+      scanLocked = true;
+
+      // QRコードの中身は「1」～「100」の数字だけにします。
+      const cardText = String(decodedText).trim();
+      if (!/^\d+$/.test(cardText)) {
+        setScanMessage("このQRはカードではありません。", true);
+        setTimeout(() => { scanLocked = false; setScanMessage("カードのQRを読み取ってください。", false); }, 1500);
+        return;
+      }
+
+      const cardNumber = Number(cardText);
+      if (!Number.isInteger(cardNumber) || cardNumber < 1 || cardNumber > 100) {
+        setScanMessage("カード番号は1～100です。", true);
+        setTimeout(() => { scanLocked = false; setScanMessage("カードのQRを読み取ってください。", false); }, 1500);
+        return;
+      }
+
+      const password = document.getElementById("password").value;
+      if (!password) {
+        setScanMessage("左下のレジPWを入力してください。", true);
+        setTimeout(() => { scanLocked = false; }, 1500);
+        return;
+      }
+
+      setScanMessage("カードを確認しています…", false);
+      try {
+        const passwordOk = await runServer("checkPassword", password);
+        if (!passwordOk) {
+          alert("パスワードがちがいます。");
+          setScanMessage("レジPWを確認してください。", true);
+          setTimeout(() => { scanLocked = false; }, 1500);
+          return;
         }
 
-        // --- 3. 効果音の設定 ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playBeep(type) {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            
-            if (type === "success") {
-                osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-            } else if (type === "pay") {
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-                setTimeout(() => {
-                    const osc2 = audioCtx.createOscillator(); osc2.connect(gain);
-                    osc2.frequency.setValueAtTime(1320, audioCtx.currentTime); osc2.start(); osc2.stop(audioCtx.currentTime + 0.15);
-                }, 120);
-            } else if (type === "error") {
-                osc.type = "sawtooth"; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
-            }
+        const balance = await runServer("getBalance", cardNumber);
+        currentCard = String(cardNumber);
+        await stopCamera();
+        playSound("https://pocket-se.info/se/barcode.mp3");
+
+        document.getElementById("salesToday").style.display = "none";
+        document.getElementById("card-area").style.display = "none";
+        document.getElementById("cardNumberDisplay").textContent = "カード番号: " + currentCard;
+        document.getElementById("balanceDisplay").textContent = Number(balance).toLocaleString();
+        document.getElementById("pay-area").style.display = "block";
+        document.getElementById("payment").focus();
+      } catch (error) {
+        alert(error.message);
+        scanLocked = false;
+        setScanMessage("もう一度読み取ってください。", true);
+      }
+    }
+
+    async function doPayment() {
+      const payButton = document.getElementById("payBtn");
+      if (payButton.disabled) return;
+
+      const paymentInput = document.getElementById("payment");
+      const pay = Number(paymentInput.value);
+      const password = document.getElementById("password").value;
+
+      if (paymentInput.value === "" || !Number.isInteger(pay) || pay < 0) {
+        alert("正しいお会計金額を入力してください。");
+        return;
+      }
+      if (pay === 0) {
+        showResult("とりけしました。", false);
+        return;
+      }
+
+      payButton.disabled = true;
+      playSound("https://pocket-se.info/se/barcode.mp3");
+
+      try {
+        const result = await runServer("processPayment", password, currentCard, pay);
+        if (!result.success) {
+          alert(result.message);
+          if (typeof result.balance === "number") {
+            document.getElementById("balanceDisplay").textContent = result.balance.toLocaleString();
+          }
+          payButton.disabled = false;
+          return;
         }
 
-        // --- 4. QRコード読み込み時の処理 ---
-        function onScanSuccess(decodedText) {
-            if (isProcessing) return;
-            const code = parseInt(decodedText.trim());
-            if (isNaN(code)) return;
+        todaySales += pay;
+        updateSalesDisplay();
+        playSound("https://pocket-se.info/se/itemget5.mp3");
+        showResult("残高：" + Number(result.newBalance).toLocaleString() + " 円", true);
+      } catch (error) {
+        alert(error.message);
+        payButton.disabled = false;
+      }
+    }
 
-            if (currentPhase === "SCAN") {
-                if (code >= 101 && code <= 200) {
-                    isProcessing = true;
-                    const item = itemMaster[code];
-                    
-                    if (!item || !item.name) {
-                        playBeep("success");
-                        addCartItem(`📦 しょうひん(ID:${code})`, 100);
-                    } else {
-                        playBeep("success");
-                        addCartItem(item.name, item.price);
-                    }
-                    setTimeout(() => { isProcessing = false; }, 1500);
-                }
-            } 
-            else if (currentPhase === "PAY") {
-                if (code >= 1001 && code <= 1010) {
-                    isProcessing = true;
-                    let currentBalance = cardBalances[code];
+    function showResult(message, paid) {
+      document.getElementById("pay-area").style.display = "none";
+      const result = document.getElementById("result");
+      result.style.display = "block";
+      result.textContent = paid ? "お会計できました！\n" + message : message;
+      result.style.whiteSpace = "pre-line";
+      setTimeout(resetScreen, 2500);
+    }
 
-                    if (currentBalance >= currentTotal) {
-                        playBeep("pay");
-                        cardBalances[code] -= currentTotal;
-                        
-                        document.getElementById("cardName").innerText = `💳 カード(${code}) のざんだか`;
-                        document.getElementById("balanceAmount").innerText = cardBalances[code];
-                        document.getElementById("balanceContainer").style.display = "block";
+    function cancelPayment() {
+      document.getElementById("pay-area").style.display = "none";
+      document.getElementById("result").style.display = "block";
+      document.getElementById("result").textContent = "とりけしました。";
+      setTimeout(resetScreen, 1000);
+    }
 
-                        html5QrcodeScanner.pause();
-                        setTimeout(() => { showReceipt(code); }, 500);
-                    } else {
-                        playBeep("error");
-                        document.getElementById("cardName").innerText = `❌ カード(${code}) おまねが足りないよ`;
-                        document.getElementById("balanceAmount").innerText = currentBalance;
-                        document.getElementById("balanceContainer").style.display = "block";
-                        alert(`❌ カード[${code}] のおかねが たりないよ！`);
-                        isProcessing = false;
-                    }
-                }
-            }
-        }
+    async function resetScreen() {
+      currentCard = "";
+      scanLocked = false;
+      document.getElementById("result").style.display = "none";
+      document.getElementById("card-area").style.display = "block";
+      document.getElementById("payment").value = "";
+      document.getElementById("payBtn").disabled = false;
+      document.getElementById("salesToday").style.display = "block";
+      await startCamera();
+    }
 
-        // --- 5. カート処理とレシート表示 ---
-        function addCartItem(name, price) {
-            currentTotal += price;
-            document.getElementById("totalPrice").innerText = currentTotal;
-            const li = document.createElement("li");
-            li.className = "cart-item";
-            li.innerHTML = `<span>${name}</span><span>${price}円</span>`;
-            document.getElementById("cartList").appendChild(li);
-            const cartList = document.getElementById("cartList");
-            cartList.scrollTop = cartList.scrollHeight;
-        }
+    function updateSalesDisplay() {
+      document.getElementById("salesToday").textContent =
+        "このレジの今日の売上：" + todaySales.toLocaleString() + " 円";
+    }
 
-        function showReceipt(cardCode) {
-            const now = new Date();
-            document.getElementById("receiptDate").innerText = now.toLocaleString('ja-JP');
-            
-            // カートの商品リスト（li要素）をレシート用のフォーマット（div要素の集まり）に変換する
-            const cartItems = document.querySelectorAll("#cartList .cart-item");
-            const receiptList = document.getElementById("receiptList");
-            receiptList.innerHTML = ""; // 初期化
-            
-            cartItems.forEach(item => {
-                const name = item.children[0].innerText;
-                const price = item.children[1].innerText;
-                const div = document.createElement("div");
-                div.className = "receipt-item";
-                div.innerHTML = `<span>${name}</span><span>${price}</span>`;
-                receiptList.appendChild(div);
-            });
-            
-            document.getElementById("receiptTotal").innerText = currentTotal;
-            document.getElementById("receiptPayInfo").innerHTML = 
-                `つかったカード: [${cardCode}]<br>カードののこり: ${cardBalances[cardCode]}円`;
-            
-            document.getElementById("receiptModal").style.display = "flex";
-        }
+    function setScanMessage(message, isError) {
+      const box = document.getElementById("scanMessage");
+      box.textContent = message;
+      box.style.background = isError ? "#fee2e2" : "#dbeafe";
+      box.style.color = isError ? "#991b1b" : "#1e40af";
+    }
 
-        function closeReceipt() {
-            document.getElementById("receiptModal").style.display = "none";
-            resetRegister();
-            html5QrcodeScanner.resume();
-        }
+    function playSound(url) {
+      const audio = new Audio(url);
+      audio.play().catch(error => console.log("音声再生エラー:", error));
+    }
 
-        // --- 6. 状態切り替えとリセット ---
-        function goToPayment() {
-            if (currentTotal === 0) { alert("🛒 しょうひんを スキャンしてね！"); return; }
-            currentPhase = "PAY";
-            const banner = document.getElementById("phaseBanner");
-            banner.innerText = "💳 けっさいカードを スキャンしてね";
-            banner.className = "phase-banner phase-pay";
-            document.getElementById("checkoutBtn").disabled = true;
-        }
-
-        function resetRegister() {
-            currentTotal = 0; currentPhase = "SCAN";
-            document.getElementById("totalPrice").innerText = "0";
-            document.getElementById("cartList").innerHTML = "";
-            document.getElementById("balanceContainer").style.display = "none";
-            const banner = document.getElementById("phaseBanner");
-            banner.innerText = "🛒 しょうひんを スキャンしてね";
-            banner.className = "phase-banner phase-scan";
-            document.getElementById("checkoutBtn").disabled = false;
-            isProcessing = false;
-        }
-
-        // --- 7. カメラの起動 ---
-        function startCamera() {
-            html5QrcodeScanner = new Html5QrcodeScanner(
-                "reader", { fps: 10, qrbox: 250 }, false
-            );
-            html5QrcodeScanner.render(onScanSuccess);
-        }
-
-        window.onload = loadProducts;
-    </script>
+    window.addEventListener("load", startCamera);
+  </script>
 </body>
 </html>
