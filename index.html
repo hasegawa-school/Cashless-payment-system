@@ -25,7 +25,14 @@ import{initializeApp}from'https://www.gstatic.com/firebasejs/12.18.0/firebase-ap
 import{getFirestore,collection,doc,getDoc,getDocs,setDoc,addDoc,onSnapshot,query,orderBy,limit,runTransaction,writeBatch,serverTimestamp}from'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
 // Firebaseコンソールの「プロジェクトの設定」→「マイアプリ」に表示される値へ置き換えてください。
-const firebaseConfig={apiKey:'ここに貼り付け',authDomain:'ここに貼り付け',projectId:'ここに貼り付け',storageBucket:'ここに貼り付け',messagingSenderId:'ここに貼り付け',appId:'ここに貼り付け'};
+const firebaseConfig = {
+  apiKey: "AIzaSyBa7m0wKJDUU9Jqpzfnb0Y4Ofw50ekP-fc",
+  authDomain: "cashless-payment-system-ad1ec.firebaseapp.com",
+  projectId: "cashless-payment-system-ad1ec",
+  storageBucket: "cashless-payment-system-ad1ec.firebasestorage.app",
+  messagingSenderId: "407099391717",
+  appId: "1:407099391717:web:87b5b9f445f75ebfdbde0c"
+};
 const configured=!firebaseConfig.apiKey.includes('ここに');
 let db;if(configured)db=getFirestore(initializeApp(firebaseConfig));
 const $=id=>document.getElementById(id),mode=new URLSearchParams(location.search).get('mode')==='admin'?'admin':'register';let scanner,cameras=[],cameraIndex=0,cameraRunning=false,mirrored=false,scanLocked=false,currentCard='',localSales=0,cards=[],editingId=0,audioContext=null;
